@@ -4,8 +4,8 @@
     "allowSyntheticDefaultImports": true,
     "composite": true,
     "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
+    "declarationMap": false, //changed from true to false
+    "emitDeclarationOnly": false, // Changed from true
     "emitDecoratorMetadata": false,
     "esModuleInterop": true,
     "experimentalDecorators": false,
@@ -13,6 +13,7 @@
     "importHelpers": true,
     "incremental": true,
     "isolatedModules": true,
+    // "lib": ["es2022", "dom", "dom.iterable"], // Added dom libraries
     "lib": ["es2022"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
