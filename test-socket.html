@@ -1,88 +1,288 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8" />
     <title>Socket.IO Test</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
       .drone-data {
         margin: 10px;
-        padding: 10px;
+        padding: 15px;
+        border-radius: 5px;
         border: 1px solid #ccc;
         background: #f9f9f9;
+        font-family: Arial, sans-serif;
+      }
+      .drone-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .drone-type {
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-weight: bold;
+      }
+      .Quadcopter {
+        background-color: #ffe0e0;
+      }
+      .FixedWing {
+        background-color: #e0ffe0;
+      }
+      .VTOL {
+        background-color: #e0e0ff;
+      }
+      .Unknown {
+        background-color: #ffe0ff;
+      }
+
+      .status-indicator {
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 0.9em;
+      }
+      .Detected {
+        background-color: #fff3cd;
+      }
+      .Identified {
+        background-color: #cce5ff;
+      }
+      .Confirmed {
+        background-color: #d4edda;
+      }
+      .Engagement {
+        background-color: #f8d7da;
+      }
+
+      .threat-level {
+        display: inline-block;
+        margin-left: 10px;
+      }
+      .threat-1 {
+        color: #28a745;
+      }
+      .threat-2 {
+        color: #ffc107;
+      }
+      .threat-3 {
+        color: #fd7e14;
+      }
+      .threat-4 {
+        color: #dc3545;
+      }
+      .threat-5 {
+        color: #721c24;
+      }
+
+      .movement-info {
+        font-family: monospace;
+        margin-top: 10px;
+      }
+
+      .hovering {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .controls {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+
+      button {
+        padding: 8px 15px;
+        margin: 5px;
+        border: none;
+        border-radius: 4px;
+        background: #007bff;
+        color: white;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #0056b3;
       }
     </style>
   </head>
   <body>
-    <h2>Socket.IO Test</h2>
-    <!-- <button onclick="requestUpdate()">Request Update</button> -->
-    <button onclick="createDrones()">Create Test Drones</button>
-    <button onclick="clearMessages()">Clear Messages</button>
-
+    <h2>Drone Telemetry Test</h2>
+    <div class="controls">
+      <button onclick="requestUpdate()">Request Update</button>
+      <button onclick="clearMessages()">Clear Messages</button>
+      <button onclick="createTestDrones()">Create Test Drones</button>
+    </div>
     <div id="messages"></div>
+
     <script>
       const socket = io('http://localhost:3333');
+
+      function formatThreatLevel(level) {
+        return '&#9888;'.repeat(level);
+        // return '🔴'.repeat(level) || '⚪';
+      }
+
+      function formatDroneData(data) {
+        if (!data.drones) return JSON.stringify(data);
+
+        return data.drones
+          .map((drone) => {
+            const isHovering = drone.speed === 0;
+            return `
+                    <div class="drone-data ${isHovering ? 'hovering' : ''} ${
+              drone.droneType
+            }">
+            <div class="drone-header">
+            <span class="drone-type">${drone.droneType}</span>
+            <span class="status-indicator ${drone.status}">${
+              drone.status
+            }</span>
+                        </div>
+                        <div>
+                            ID: ${drone.droneId}
+                            <span class="threat-level threat-${
+                              drone.threatLevel
+                            }">
+                                ${formatThreatLevel(drone.threatLevel)}
+                            </span>
+                        </div>
+                        <div class="movement-info">
+                            Position: (${drone.position.lat.toFixed(
+                              6
+                            )}, ${drone.position.lng.toFixed(6)})
+                            Alt: ${drone.position.altitude.toFixed(1)}m
+                            <br>
+                            Speed: ${drone.speed.toFixed(1)} km/h
+                            Heading: ${drone.heading.toFixed(1)}&deg;
+                            ${isHovering ? '<br><strong>HOVERING</strong>' : ''}
+                        </div>
+                        <div>
+                            Last Updated: ${new Date(
+                              drone.lastUpdated
+                            ).toLocaleTimeString()}
+                        </div>
+                    </div>
+                `;
+          })
+          .join('');
+      }
+
+      socket.on('connect', () => {
+        console.log('Connected to server');
+        addMessage('<p>Connected to server</p>');
+      });
+
+      socket.on('initialDroneData', (data) => {
+        console.log('Received initial drone data:', data);
+        addMessage(`<h3>Initial Data:</h3>${formatDroneData(data)}`);
+      });
+
+      socket.on('droneUpdate', (data) => {
+        console.log('Received drone update:', data);
+        addMessage(`<h3>Update:</h3>${formatDroneData({ drones: [data] })}`);
+      });
+
+      socket.on('error', (error) => {
+        console.error('Socket error:', error);
+        addMessage(`<p style="color: red">Error: ${JSON.stringify(error)}</p>`);
+      });
 
       function requestUpdate() {
         socket.emit('requestDroneUpdate', 'TEST001');
       }
 
-      function formatDroneData(data) {
-        if (!data.drones) return JSON.stringify(data);
-        return data.drones
-          .map(
-            (drone) => `
-                <div class="drone-data">
-                    ID: ${drone.droneId}<br>
-                    Status: ${drone.status}<br>
-                    Position: ${drone.position.lat}, ${
-              drone.position.lng
-            }, Alt: ${drone.position.altitude}<br>
-                    Threat Level: ${drone.threatLevel}<br>
-                    Last Updated: ${new Date(
-                      drone.lastUpdated
-                    ).toLocaleString()}
-                </div>
-            `
-          )
-          .join('');
-      }
+      async function createTestDrones() {
+        console.log('Creating test drones...');
+        try {
+          // First clear existing drones
+          const clearResponse = await fetch(
+            'http://localhost:3333/api/drones/clear',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          console.log('Cleared existing drones:', await clearResponse.json());
 
-      function createDrones() {
-        socket.emit('createTestDrones');
+          // Create new drones
+          const response = await fetch(
+            'http://localhost:3333/api/drones/test-types',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          console.log('Response status:', response.status);
+          const data = await response.json();
+          console.log('Created drones:', data);
+
+          // Check current drones
+          const statusResponse = await fetch(
+            'http://localhost:3333/api/drones/status'
+          );
+          const status = await statusResponse.json();
+          console.log('Current drone status:', status);
+        } catch (error) {
+          console.error('Failed to manage drones:', error);
+        }
+
+        // previous implementation 2
+        // console.log('Sending request to create test drones...');
+        // try {
+        //   const response = await fetch(
+        //     'http://localhost:3333/api/drones/test-types',
+        //     {
+        //       method: 'POST',
+        //       headers: {
+        //         'Content-Type': 'application/json',
+        //       },
+        //     }
+        //   );
+        //   console.log('Response status:', response.status);
+        //   const data = await response.json();
+        //   console.log('Response data:', data);
+        // } catch (error) {
+        //   console.error('Failed to create test drones:', error);
+        // }
+
+        // original implementation 1
+        //   .then((response) => {
+        //     console.log('Got response:', response.status);
+        //     return response.json();
+        //   })
+        //   .then((data) => console.log('Created test drones:', data))
+        //   .catch((error) => console.error('Error creating drones:', error));
+        //     }
       }
 
       function clearMessages() {
         document.getElementById('messages').innerHTML = '';
       }
 
-      socket.on('connect', () => {
-        console.log('Connected to server');
-        document.getElementById('messages').innerHTML +=
-          '<p>Connected to server</p>';
-      });
-
-      socket.on('initialDroneData', (data) => {
-        console.log('Received initial drone data:', data);
-        document.getElementById(
-          'messages'
-        ).innerHTML += `<p>Initial data:</p>${formatDroneData(data)}`;
-      });
-
-      socket.on('droneUpdate', (data) => {
-        console.log('Received drone update:', data);
-        document.getElementById(
-          'messages'
-        ).innerHTML += `<p>Update:</p>${formatDroneData({ drones: [data] })}`;
-      });
-
-      socket.on('error', (error) => {
-        console.error('Socket error:', error);
-        document.getElementById(
-          'messages'
-        ).innerHTML += `<p style="color: red">Error: ${JSON.stringify(
-          error
-        )}</p>`;
-      });
+      function addMessage(html) {
+        const messages = document.getElementById('messages');
+        messages.innerHTML = html + messages.innerHTML;
+      }
     </script>
   </body>
 </html>

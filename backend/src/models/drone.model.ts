@@ -1,11 +1,16 @@
-// more structured with specific fields with additional validations
-
 import mongoose, { Schema, Document } from 'mongoose';
 
+export type DroneType = 'Quadcopter' | 'FixedWing' | 'VTOL' | 'Unknown';
+export type DroneStatus =
+  | 'Detected'
+  | 'Identified'
+  | 'Confirmed'
+  | 'Engagement Ready';
 // Interface for type safety
 export interface IDrone extends Document {
   droneId: string;
-  status: 'Detected' | 'Identified' | 'Confirmed' | 'Engagement Ready';
+  droneType: DroneType;
+  status: DroneStatus;
   position: {
     lat: number;
     lng: number;
@@ -16,12 +21,22 @@ export interface IDrone extends Document {
   threatLevel: number;
   lastUpdated: Date;
   isEngaged: boolean;
-  engagementHistory: any[]; // We can make this more specific if needed
+  engagementHistory: any[];
+}
+
+export interface IDroneDocument extends IDrone, Document {
+  droneType: DroneType;
 }
 
 // The actual schema
 const DroneSchema: Schema = new Schema({
   droneId: { type: String, required: true, unique: true },
+  droneType: {
+    type: String,
+    enum: ['Quadcopter', 'FixedWing', 'VTOL', 'Unknown'],
+    default: 'Unknown',
+    required: true,
+  },
   status: {
     type: String,
     enum: ['Detected', 'Identified', 'Confirmed', 'Engagement Ready'],
@@ -38,6 +53,17 @@ const DroneSchema: Schema = new Schema({
   lastUpdated: { type: Date, default: Date.now },
   isEngaged: { type: Boolean, default: false },
   engagementHistory: [{ type: Schema.Types.Mixed }],
+  capabilities: [
+    {
+      type: String,
+      enum: ['Surveillance', 'Cargo', 'Combat', 'Unknown'],
+    },
+  ],
+  size: {
+    type: String,
+    enum: ['Small', 'Medium', 'Large'],
+    default: 'Medium',
+  },
 });
 
 export default mongoose.model<IDrone>('Drone', DroneSchema);

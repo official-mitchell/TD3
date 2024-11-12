@@ -88,6 +88,7 @@ const server = app.listen(port, () => {
 });
 
 const socketService = new SocketService(server);
+app.set('socketService', socketService);
 
 // Error handling for server
 server.on('error', console.error);
