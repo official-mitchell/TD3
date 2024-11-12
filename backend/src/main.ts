@@ -3,9 +3,10 @@ import * as path from 'path';
 import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
-import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import droneRoutes from './routes/drone.routes';
+// import { Server } from 'socket.io';
+import SocketService from './services/socket-service';
 
 const app = express();
 
@@ -51,7 +52,7 @@ app.use(
     origin:
       process.env.NODE_ENV === 'production'
         ? 'your-production-domain'
-        : 'http://localhost:3000',
+        : ['http://localhost:3000', 'http://localhost:8000'],
   })
 );
 app.use(express.json()); // Body parsing
@@ -86,25 +87,7 @@ const server = app.listen(port, () => {
   console.log(`Listening at http://localhost:${port}/api`);
 });
 
-// Socket.io setup
-const io = new Server(server, {
-  cors: {
-    origin:
-      process.env.NODE_ENV === 'production'
-        ? 'your-production-domain'
-        : 'http://localhost:3000',
-    methods: ['GET', 'POST'],
-  },
-});
-
-// Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log('Client connected');
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected');
-  });
-});
+const socketService = new SocketService(server);
 
 // Error handling for server
 server.on('error', console.error);
@@ -120,3 +103,25 @@ process.on('SIGTERM', () => {
     });
   });
 });
+
+export { socketService };
+
+// Socket.io setup
+// const io = new Server(server, {
+//   cors: {
+//     origin:
+//       process.env.NODE_ENV === 'production'
+//         ? 'your-production-domain'
+//         : 'http://localhost:3000',
+//     methods: ['GET', 'POST'],
+//   },
+// });
+
+// // Socket.io connection handling
+// io.on('connection', (socket) => {
+//   console.log('Client connected');
+
+//   socket.on('disconnect', () => {
+//     console.log('Client disconnected');
+//   });
+// });

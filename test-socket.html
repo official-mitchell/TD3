@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO Test</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+      .drone-data {
+        margin: 10px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background: #f9f9f9;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Socket.IO Test</h2>
+    <!-- <button onclick="requestUpdate()">Request Update</button> -->
+    <button onclick="createDrones()">Create Test Drones</button>
+    <button onclick="clearMessages()">Clear Messages</button>
+
+    <div id="messages"></div>
+    <script>
+      const socket = io('http://localhost:3333');
+
+      function requestUpdate() {
+        socket.emit('requestDroneUpdate', 'TEST001');
+      }
+
+      function formatDroneData(data) {
+        if (!data.drones) return JSON.stringify(data);
+        return data.drones
+          .map(
+            (drone) => `
+                <div class="drone-data">
+                    ID: ${drone.droneId}<br>
+                    Status: ${drone.status}<br>
+                    Position: ${drone.position.lat}, ${
+              drone.position.lng
+            }, Alt: ${drone.position.altitude}<br>
+                    Threat Level: ${drone.threatLevel}<br>
+                    Last Updated: ${new Date(
+                      drone.lastUpdated
+                    ).toLocaleString()}
+                </div>
+            `
+          )
+          .join('');
+      }
+
+      function createDrones() {
+        socket.emit('createTestDrones');
+      }
+
+      function clearMessages() {
+        document.getElementById('messages').innerHTML = '';
+      }
+
+      socket.on('connect', () => {
+        console.log('Connected to server');
+        document.getElementById('messages').innerHTML +=
+          '<p>Connected to server</p>';
+      });
+
+      socket.on('initialDroneData', (data) => {
+        console.log('Received initial drone data:', data);
+        document.getElementById(
+          'messages'
+        ).innerHTML += `<p>Initial data:</p>${formatDroneData(data)}`;
+      });
+
+      socket.on('droneUpdate', (data) => {
+        console.log('Received drone update:', data);
+        document.getElementById(
+          'messages'
+        ).innerHTML += `<p>Update:</p>${formatDroneData({ drones: [data] })}`;
+      });
+
+      socket.on('error', (error) => {
+        console.error('Socket error:', error);
+        document.getElementById(
+          'messages'
+        ).innerHTML += `<p style="color: red">Error: ${JSON.stringify(
+          error
+        )}</p>`;
+      });
+    </script>
+  </body>
+</html>
