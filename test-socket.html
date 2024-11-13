@@ -7,7 +7,7 @@
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
       body {
-        padding: 20px;
+        padding: 20px; 
         font-family: Arial, sans-serif;
       }
       .system-info {
@@ -167,11 +167,12 @@
     .target-item {
     display: flex;
     align-items: center;
-    padding: 8px;
-    margin: 4px 0;
+    padding: 10px;
+    margin: 5px 0;
     background: #f8f9fa;
     border-radius: 4px;
     cursor: pointer;
+    transition: all 0.2s;
     }
 
     .target-number {
@@ -229,7 +230,7 @@
                 <div id="target-list" class="target-list">
                     <!-- Targets will be dynamically populated here -->
                 </div>
-                <button id="engage-targets" class="fire-button" disabled>
+                <button id="engage-targets" class="fire-button" disabled onclick="engageTargets()">
                     FIRE AT SELECTED TARGETS
                 </button>
             </div>
@@ -241,22 +242,11 @@
         <div id="messages"></div>
     </div>
 
-    <!-- <h2>Drone Telemetry Test</h2> -->
-    <!-- <div class="platform-status">
-      <h3>Weapon Platform Status</h3>
-      <div id="platform-info"></div>
-      <button onclick="checkPlatform()">Check Platform</button>
-    </div> -->
-    <!-- <div class="controls">
-      <button onclick="requestUpdate()">Request Update</button>
-      <button onclick="clearMessages()">Clear Messages</button>
-      <button onclick="createTestDrones()">Create Test Drones</button>
-    </div> -->
-    <!-- <div id="messages"></div> -->
 
     <script>
       const socket = io('http://localhost:3333');
-
+      let selectedTargets = new Set();
+      let allDrones = [];
       let platformPosition = { lat: 37.7749, lng: -122.4194 }; // Default position
 
         function getPlatformPosition() {
@@ -280,25 +270,25 @@
         }
 
         function calculateBearing(pos1, pos2) {
-    const φ1 = (pos1.lat * Math.PI) / 180;
-    const φ2 = (pos2.lat * Math.PI) / 180;
-    const λ1 = (pos1.lng * Math.PI) / 180;
-    const λ2 = (pos2.lng * Math.PI) / 180;
+            const φ1 = (pos1.lat * Math.PI) / 180;
+            const φ2 = (pos2.lat * Math.PI) / 180;
+            const λ1 = (pos1.lng * Math.PI) / 180;
+            const λ2 = (pos2.lng * Math.PI) / 180;
 
-    const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
-    const x = Math.cos(φ1) * Math.sin(φ2) -
-        Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
-    
-    let bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-    
-    // Convert to cardinal direction
-    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-    const index = Math.round(bearing / 45) % 8;
-    
-    return {
-        degrees: bearing.toFixed(1),
-        cardinal: directions[index]
-    };
+            const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
+            const x = Math.cos(φ1) * Math.sin(φ2) -
+                Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
+            
+            let bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+            
+            // Convert to cardinal direction
+            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            const index = Math.round(bearing / 45) % 8;
+            
+            return {
+                degrees: bearing.toFixed(1),
+                cardinal: directions[index]
+            };
 }
 
       async function checkPlatform() {
@@ -378,47 +368,7 @@
         `;
     }).join('');
 
-    // original implementation
-        // return data.drones
-        //   .map((drone) => {
-        //     const isHovering = drone.speed === 0;
-        //     return `
-        //             <div class="drone-data ${isHovering ? 'hovering' : ''} ${
-        //       drone.droneType
-        //     }">
-        //     <div class="drone-header">
-        //     <span class="drone-type">${drone.droneType}</span>
-        //     <span class="status-indicator ${drone.status}">${
-        //       drone.status
-        //     }</span>
-        //     </div>
-        //     <div>
-        //         ID: ${drone.droneId}
-        //         <span class="threat-level threat-${
-        //             drone.threatLevel
-        //         }">
-        //             ${formatThreatLevel(drone.threatLevel)}
-        //         </span>
-        //     </div>
-        //     <div class="movement-info">
-        //         Position: (${drone.position.lat.toFixed(
-        //             6
-        //         )}, ${drone.position.lng.toFixed(6)})
-        //         Alt: ${drone.position.altitude.toFixed(1)}m
-        //         <br>
-        //         Speed: ${drone.speed.toFixed(1)} km/h
-        //         Heading: ${drone.heading.toFixed(1)}&deg;
-        //         ${isHovering ? '<br><strong>HOVERING</strong>' : ''}
-        //     </div>
-        //     <div>
-        //         Last Updated: ${new Date(
-        //             drone.lastUpdated
-        //         ).toLocaleTimeString()}
-        //     </div>
-        // </div>
-        //         `;
-        //   })
-        //   .join('');
+    
       }
 
       socket.on('connect', () => {
@@ -428,13 +378,101 @@
 
       socket.on('initialDroneData', (data) => {
         console.log('Received initial drone data:', data);
+        allDrones = data.drones || [];
+        updateTargetList();
         addMessage(`<h3>Initial Data:</h3>${formatDroneData(data)}`);
       });
 
+
+    function updateTargetList() {
+    const platform = getPlatformPosition();
+    const EFFECTIVE_RANGE = 2000; // 2km
+    
+    const targets = allDrones
+        .filter(drone => {
+            const distance = calculateDistance(drone.position, platform);
+            return distance <= EFFECTIVE_RANGE && 
+                   !['Destroyed', 'Hit'].includes(drone.status);
+        })
+        .sort((a, b) => b.threatLevel - a.threatLevel);
+
+    const targetList = document.getElementById('target-list');
+    if (!targetList) return;
+
+    targetList.innerHTML = targets.map(drone => `
+        <div class="target-item" data-drone-id="${drone.droneId}" onclick="selectTarget('${drone.droneId}')">
+            <input type="checkbox" 
+                   ${selectedTargets.has(drone.droneId) ? 'checked' : ''}
+                   onclick="event.stopPropagation()"
+                   onchange="selectTarget('${drone.droneId}', event)"
+            >
+            <div class="target-info">
+                ${drone.droneType} 
+                (${(calculateDistance(drone.position, platform)/1000).toFixed(2)}km)
+                ${'🔴'.repeat(drone.threatLevel)}
+            </div>
+        </div>
+    `).join('');
+
+    updateFireButtonState();
+}
+
+    function selectTarget(droneId, event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        
+        if (selectedTargets.has(droneId)) {
+            selectedTargets.delete(droneId);
+        } else {
+            selectedTargets.add(droneId);
+        }
+        
+        updateTargetList();
+        updateFireButtonState();
+    }
+
+    function updateFireButtonState() {
+    const fireButton = document.getElementById('engage-targets');
+    if (fireButton) {
+        fireButton.disabled = selectedTargets.size === 0;
+    }
+}
+
+// helper function to throttle the target list updates
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+}
+    
+        
       socket.on('droneUpdate', (data) => {
         console.log('Received drone update:', data);
-        addMessage(`<h3>Update:</h3>${formatDroneData({ drones: [data] })}`);
-      });
+        // Update drone in allDrones array without refreshing target list
+        const index = allDrones.findIndex(d => d.droneId === data.droneId);
+        if (index !== -1) {
+            allDrones[index] = data;
+            // Only update target list if drone status changes
+            if (data.status !== allDrones[index].status) {
+                    updateTargetList();
+                } else {
+                    throttledUpdateTargetList();
+                }
+        } else {
+            allDrones.push(data);
+            updateTargetList();
+        }
+        addMessage(`<h3>Update:</h3>${formatDroneData({drones: [data]})}`);
+        });
+
+    // Create throttled version of updateTargetList
+    const throttledUpdateTargetList = throttle(updateTargetList, 1000); // Update max once per second
 
       socket.on('error', (error) => {
         console.error('Socket error:', error);
@@ -489,33 +527,6 @@
           console.error('Failed to manage drones:', error);
         }
 
-        // previous implementation 2
-        // console.log('Sending request to create test drones...');
-        // try {
-        //   const response = await fetch(
-        //     'http://localhost:3333/api/drones/test-types',
-        //     {
-        //       method: 'POST',
-        //       headers: {
-        //         'Content-Type': 'application/json',
-        //       },
-        //     }
-        //   );
-        //   console.log('Response status:', response.status);
-        //   const data = await response.json();
-        //   console.log('Response data:', data);
-        // } catch (error) {
-        //   console.error('Failed to create test drones:', error);
-        // }
-
-        // original implementation 1
-        //   .then((response) => {
-        //     console.log('Got response:', response.status);
-        //     return response.json();
-        //   })
-        //   .then((data) => console.log('Created test drones:', data))
-        //   .catch((error) => console.error('Error creating drones:', error));
-        //     }
       }
 
       function clearMessages() {
@@ -569,123 +580,252 @@
       document.head.appendChild(style);
 
 
-      function updateTargetList() {
-    const platform = getPlatformPosition();
-    const EFFECTIVE_RANGE = 2000; // 2km
-    
-    // Get all drones, filter by range, sort by threat
-    const targets = allDrones
-        .filter(drone => {
-            const distance = calculateDistance(drone.position, platform);
-            return distance <= EFFECTIVE_RANGE;
-        })
-        .sort((a, b) => {
-            // Sort by threat level first, then distance
-            if (b.threatLevel !== a.threatLevel) {
-                return b.threatLevel - a.threatLevel;
-            }
-            const distA = calculateDistance(a.position, platform);
-            const distB = calculateDistance(b.position, platform);
-            return distA - distB;
-        })
-        .slice(0, 10); // Take top 10
+      document.body.insertAdjacentHTML('afterbegin', systemInfoHtml);
 
-    const targetList = document.getElementById('target-list');
-    targetList.innerHTML = targets.map((drone, index) => `
-        <div class="target-item" onclick="selectTarget(${index})">
-            <input type="checkbox" id="target-${index}">
-            <span class="target-number"></span>
-            <div class="target-info">
-                ${drone.droneType} (${(calculateDistance(drone.position, platform)/1000).toFixed(2)}km)
-                ${'🔴'.repeat(drone.threatLevel)}
-            </div>
-        </div>
-    `).join('');
+const additionalStyle = document.createElement('style');
+additionalStyle.textContent = `
+    .platform-status-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .status-panel {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        font-size: 1.2em;
+    }
+
+    .target-list {
+        max-height: 300px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 10px;
+    }
+
+    .target-item {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        margin: 4px 0;
+        background: #f8f9fa;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .target-item.selected {
+        background: #cce5ff;
+    border: 1px solid #b8daff;
+    }
+
+    .target-item:hover {
+        background: #e9ecef;
+    }
+
+    .target-number {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        background: #dc3545;
+        color: white;
+        text-align: center;
+        border-radius: 50%;
+        margin: 0 10px;
+        font-weight: bold;
+    }
+
+    .target-item input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
 }
 
-    let selectedTargets = [];
-    let isEngaging = false;
+    #turret-status {
+        font-weight: bold;
+    }
+    
+    #turret-status:not(:empty)::before {
+        content: "●";
+        margin-right: 5px;
+    }
+    
+    #turret-status[textContent="IDLE"]::before {
+        color: #28a745;
+    }
+    
+    #turret-status[textContent="TARGETING"]::before,
+    #turret-status[textContent="FIRING"]::before {
+        color: #dc3545;
+    }
 
-    function selectTarget(index) {
-        if (isEngaging) return;
+    .fire-button {
+        background: #dc3545;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 4px;
+        margin-top: 10px;
+        width: 100%;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .fire-button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+    }
+
+    .heading-indicator {
+        display: flex;
+        align-items: center;
+        margin: 10px 0;
+    }
+
+    .heading-indicator::before {
+        content: "⮕";
+        display: inline-block;
+        margin-right: 10px;
+        font-size: 1.5em;
+        transform-origin: center;
+        transition: transform 1s ease;
+    }
+
+    #turret-heading {
+        transition: color 0.3s ease;
+    }
+
+    #turret-heading.rotating {
+        color: #dc3545;
+    }
+`;
+document.head.appendChild(additionalStyle);
+
+
+function updateTurretHeading(targetDroneId = null) {
+    const platform = getPlatformPosition();
+    const turretHeadingElement = document.getElementById('turret-heading');
+    
+    if (!targetDroneId) {
+        // If no target, find highest threat drone in range
+        const highestThreatDrone = allDrones
+            .filter(drone => {
+                const distance = calculateDistance(drone.position, platform);
+                return distance <= 2000 && !['Destroyed', 'Hit'].includes(drone.status);
+            })
+            .sort((a, b) => b.threatLevel - a.threatLevel)[0];
+            
+        targetDroneId = highestThreatDrone?.droneId;
+    }
+    
+    if (targetDroneId) {
+        const targetDrone = allDrones.find(d => d.droneId === targetDroneId);
+        if (targetDrone) {
+            const bearing = calculateBearing(platform, targetDrone.position);
+            // Animate the heading change
+            animateHeading(bearing.degrees);
+            turretHeadingElement.textContent = `${bearing.degrees}° (${bearing.cardinal})`;
+        }
+    }
+}
+
+function animateHeading(newHeading) {
+    const headingElement = document.getElementById('turret-heading');
+    const currentHeading = parseFloat(headingElement.textContent) || 0;
+    
+    // Calculate shortest rotation direction
+    let delta = ((newHeading - currentHeading + 540) % 360) - 180;
+    
+    // Animate the rotation
+    let start = null;
+    const duration = 1000; // 1 second rotation
+    
+    function animate(timestamp) {
+        if (!start) start = timestamp;
+        const progress = (timestamp - start) / duration;
         
-        const checkbox = document.getElementById(`target-${index}`);
-        const numberSpan = checkbox.parentElement.querySelector('.target-number');
-        
-        if (checkbox.checked) {
-            // Deselect
-            checkbox.checked = false;
-            numberSpan.textContent = '';
-            selectedTargets = selectedTargets.filter(t => t !== index);
+        if (progress < 1) {
+            const currentRotation = currentHeading + (delta * progress);
+            headingElement.textContent = `${currentRotation.toFixed(1)}°`;
+            requestAnimationFrame(animate);
         } else {
-            // Select
-            checkbox.checked = true;
-            selectedTargets.push(index);
-            numberSpan.textContent = selectedTargets.length;
-        }
-        
-        document.getElementById('engage-targets').disabled = selectedTargets.length === 0;
-    }
-
-    async function engageTargets() {
-        if (isEngaging) return;
-        isEngaging = true;
-        document.getElementById('turret-status').textContent = 'ENGAGING';
-        
-        for (const targetIndex of selectedTargets) {
-            await engageTarget(targetIndex);
-        }
-        
-        isEngaging = false;
-        selectedTargets = [];
-        document.getElementById('turret-status').textContent = 'IDLE';
-        updateTargetList();
-    }
-
-    async function engageTarget(index) {
-        const target = allDrones[index];
-        const platform = getPlatformPosition();
-        
-        // Calculate time to rotate turret
-        const currentHeading = parseFloat(document.getElementById('turret-heading').textContent);
-        const targetBearing = calculateBearing(platform, target.position).degrees;
-        const rotationTime = Math.abs(targetBearing - currentHeading) * 50; // 50ms per degree
-        
-        // Rotate turret
-        document.getElementById('turret-status').textContent = 'ROTATING';
-        await new Promise(r => setTimeout(r, rotationTime));
-        document.getElementById('turret-heading').textContent = `${targetBearing}°`;
-        
-        // Fire burst
-        document.getElementById('turret-status').textContent = 'FIRING';
-        await new Promise(r => setTimeout(r, 1000));
-        
-        // Calculate hit probability (simplified)
-        const distance = calculateDistance(target.position, platform);
-        const baseAccuracy = 0.9; // 90% base accuracy
-        const distanceFactor = 1 - (distance / 2000) * 0.3; // Reduce accuracy with distance
-        const finalAccuracy = baseAccuracy * distanceFactor;
-        
-        const hit = Math.random() < finalAccuracy;
-        
-        // Update drone status if hit
-        if (hit) {
-        try {
-            const response = await fetch(`http://localhost:3333/api/drones/${target.droneId}/hit`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            console.log(`Target ${target.droneId} hit confirmed`);
-        } catch (error) {
-            console.error('Error registering hit:', error);
+            headingElement.textContent = `${newHeading.toFixed(1)}°`;
         }
     }
     
+    requestAnimationFrame(animate);
+}
+
+
+
+    let isEngaging = false;
+
+
+    async function engageTargets() {
+
+        if (selectedTargets.size === 0) return;
+
+        // if (isEngaging) return;
+        // isEngaging = true;
+        // document.getElementById('turret-status').textContent = 'ENGAGING';
+
+        const turretStatus = document.getElementById('turret-status');
+        const fireButton = document.getElementById('engage-targets');
+        fireButton.disabled = true;
         
-        await new Promise(r => setTimeout(r, 500)); // Cool down between targets
+
+        try {
+        // Process each selected target
+        for (const droneId of selectedTargets) {
+            const target = allDrones.find(d => d.droneId === droneId);
+            if (!target) continue;
+
+            updateTurretHeading(droneId);
+
+            
+            turretStatus.textContent = `TARGETING ${droneId}`;
+            await new Promise(r => setTimeout(r, 1000));
+            
+            turretStatus.textContent = 'FIRING';
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Engage target
+            try {
+                await fetch(`http://localhost:3333/api/drones/${droneId}/hit`, {
+                    method: 'POST'
+                });
+                console.log(`Hit confirmed on ${droneId}`);
+            } catch (error) {
+                console.error(`Failed to engage ${droneId}:`, error);
+            }
+            
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    } finally {
+        selectedTargets.clear();
+        turretStatus.textContent = 'IDLE';
+        fireButton.disabled = true;
+        updateTargetList();
+
+        // Reset heading to face highest threat
+        updateTurretHeading();
     }
+        // original implementation
+        // isEngaging = false;
+        // selectedTargets = [];
+        // document.getElementById('turret-status').textContent = 'IDLE';
+        // updateTargetList();
+    }
+
+    setInterval(() => {
+    if (document.getElementById('turret-status').textContent === 'IDLE') {
+        updateTurretHeading();
+    }
+}, 2000);
 
     // Add socket listeners for hit events
     socket.on('droneHit', (data) => {
@@ -711,3 +851,100 @@
     </script>
   </body>
 </html>
+
+
+
+
+    <!-- <h2>Drone Telemetry Test</h2> -->
+    <!-- <div class="platform-status">
+      <h3>Weapon Platform Status</h3>
+      <div id="platform-info"></div>
+      <button onclick="checkPlatform()">Check Platform</button>
+    </div> -->
+    <!-- <div class="controls">
+      <button onclick="requestUpdate()">Request Update</button>
+      <button onclick="clearMessages()">Clear Messages</button>
+      <button onclick="createTestDrones()">Create Test Drones</button>
+    </div> -->
+    <!-- <div id="messages"></div> -->
+
+
+
+    <!-- original implementation
+        return data.drones
+          .map((drone) => {
+            const isHovering = drone.speed === 0;
+            return `
+                    <div class="drone-data ${isHovering ? 'hovering' : ''} ${
+              drone.droneType
+            }">
+            <div class="drone-header">
+            <span class="drone-type">${drone.droneType}</span>
+            <span class="status-indicator ${drone.status}">${
+              drone.status
+            }</span>
+            </div>
+            <div>
+                ID: ${drone.droneId}
+                <span class="threat-level threat-${
+                    drone.threatLevel
+                }">
+                    ${formatThreatLevel(drone.threatLevel)}
+                </span>
+            </div>
+            <div class="movement-info">
+                Position: (${drone.position.lat.toFixed(
+                    6
+                )}, ${drone.position.lng.toFixed(6)})
+                Alt: ${drone.position.altitude.toFixed(1)}m
+                <br>
+                Speed: ${drone.speed.toFixed(1)} km/h
+                Heading: ${drone.heading.toFixed(1)}&deg;
+                ${isHovering ? '<br><strong>HOVERING</strong>' : ''}
+            </div>
+            <div>
+                Last Updated: ${new Date(
+                    drone.lastUpdated
+                ).toLocaleTimeString()}
+            </div>
+        </div>
+                `;
+          })
+          .join(''); -->
+
+<!-- 
+          previously in function selectTarget()
+            if (checkbox.checked) {
+            selectedTargets.add(droneId);
+        } else {
+            selectedTargets.delete(droneId);
+        }
+
+            if (!checkbox) return;
+            const targetItem = checkbox.closest('.target-item');
+            const numberSpan = checkbox.parentElement.querySelector('.target-number');
+            
+            if (checkbox.checked) {
+                // Deselect
+                checkbox.checked = false;
+                numberSpan.textContent = '';
+                selectedTargets = selectedTargets.filter(t => t !== index);
+            } else {
+                // Select
+                checkbox.checked = true;
+                selectedTargets.push(index);
+                numberSpan.textContent = selectedTargets.length;
+            }
+
+                const fireButton = document.getElementById('engage-targets');
+            if (fireButton) {
+                fireButton.disabled = selectedTargets.length === 0;
+            }
+
+            document.getElementById('engage-targets').disabled = selectedTargets.length === 0;
+
+            Update fire button state
+            const fireButton = document.getElementById('engage-targets');
+            fireButton.disabled = selectedTargets.size === 0;
+            
+            console.log('Selected targets:', Array.from(selectedTargets)); -->

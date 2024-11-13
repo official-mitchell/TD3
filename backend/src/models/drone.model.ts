@@ -35,7 +35,7 @@ const DroneSchema: Schema = new Schema({
   droneId: { type: String, required: true, unique: true },
   droneType: {
     type: String,
-    enum: ['Quadcopter', 'FixedWing', 'VTOL', 'Unknown'],
+    enum: ['Quadcopter', 'Fixed Wing', 'VTOL', 'Unknown'],
     default: 'Unknown',
     required: true,
   },
