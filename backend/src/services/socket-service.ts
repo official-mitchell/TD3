@@ -5,6 +5,9 @@ import Drone, {
   IDroneDocument,
   DroneType,
 } from '../models/drone.model';
+import WeaponPlatform, {
+  IWeaponPlatform,
+} from '../models/weapon-platform.model';
 
 interface SimulationConfig {
   movementSpeed: number; // How fast drones move
@@ -29,6 +32,7 @@ export class SocketService {
     statusChangeProb: 0.2,
     threatChangeProb: 0.1,
   };
+  private platform: IWeaponPlatform | null = null;
 
   constructor(server: HttpServer) {
     this.io = new SocketServer(server, {
@@ -41,9 +45,9 @@ export class SocketService {
         methods: ['GET', 'POST'],
       },
     });
-
     this.setupSocketHandlers();
     this.startSimulation();
+    this.initializePlatform();
   }
 
   private setupSocketHandlers() {
@@ -110,9 +114,47 @@ export class SocketService {
     return patterns[droneType] || patterns.Unknown;
   }
 
+  private async initializePlatform() {
+    try {
+      // Get or create platform
+      let platform = await WeaponPlatform.findOne({ isActive: true });
+      if (!platform) {
+        platform = await WeaponPlatform.create({
+          position: {
+            lat: 37.7749,
+            lng: -122.4194,
+          },
+          heading: 0,
+          isActive: true,
+        });
+      }
+      this.platform = platform;
+      console.log('Weapon platform initialized:', this.platform);
+    } catch (error) {
+      console.error('Error initializing weapon platform:', error);
+    }
+  }
+
+  // Add method to get platform position
+  private getPlatformPosition() {
+    return this.platform?.position || { lat: 37.7749, lng: -122.4194 };
+  }
+
   private async updateDrone(droneId: string) {
     try {
       const drone = (await Drone.findOne({ droneId })) as IDroneDocument;
+      if (drone && this.platform) {
+        const platformPos = this.getPlatformPosition();
+
+        // Calculate distance to platform
+        const distance = this.calculateDistance(drone.position, platformPos);
+        // Log distance for debugging
+        console.log(
+          `Drone ${droneId} is ${distance.toFixed(2)}m from platform`
+        );
+      }
+
+      // Rest of the update logic
       if (drone) {
         // Get movement pattern based on drone type
         const movement = this.calculateMovement(drone.droneType);
@@ -196,6 +238,26 @@ export class SocketService {
     }
   }
 
+  private calculateDistance(
+    pos1: { lat: number; lng: number },
+    pos2: { lat: number; lng: number }
+  ): number {
+    // Simple distance calculation (can be enhanced with proper geospatial calculation)
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = (pos1.lat * Math.PI) / 180;
+    const φ2 = (pos2.lat * Math.PI) / 180;
+    const Δφ = ((pos2.lat - pos1.lat) * Math.PI) / 180;
+    const Δλ = ((pos2.lng - pos1.lng) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
+
   private startSimulation() {
     // Update all drones every 2 seconds
     this.simulationInterval = setInterval(async () => {
@@ -245,11 +307,12 @@ export class SocketService {
           droneId: 'QUAD-001',
           droneType: 'Quadcopter',
           status: 'Detected',
-          position: {
-            lat: 37.7749 + (Math.random() - 0.5) * 0.01,
-            lng: -122.4194 + (Math.random() - 0.5) * 0.01,
-            altitude: 100,
-          },
+          position: this.generateRandomPosition(this.platform!.position, 2000),
+          //   position: {
+          //     lat: 37.7749 + (Math.random() - 0.5) * 0.01,
+          //     lng: -122.4194 + (Math.random() - 0.5) * 0.01,
+          //     altitude: 100,
+          //   },
           speed: 15,
           heading: Math.random() * 360,
           threatLevel: 2,
@@ -257,13 +320,14 @@ export class SocketService {
         },
         {
           droneId: 'FIXED-001',
-          droneType: 'FixedWing',
+          droneType: 'Fixed Wing',
           status: 'Detected',
-          position: {
-            lat: 37.7749 + (Math.random() - 0.5) * 0.01,
-            lng: -122.4194 + (Math.random() - 0.5) * 0.01,
-            altitude: 500,
-          },
+          position: this.generateRandomPosition(this.platform!.position, 2000),
+          //   position: {
+          //     lat: 37.7749 + (Math.random() - 0.5) * 0.01,
+          //     lng: -122.4194 + (Math.random() - 0.5) * 0.01,
+          //     altitude: 500,
+          //   },
           speed: 100,
           heading: Math.random() * 360,
           threatLevel: 3,
@@ -273,11 +337,12 @@ export class SocketService {
           droneId: 'VTOL-001',
           droneType: 'VTOL',
           status: 'Detected',
-          position: {
-            lat: 37.7749 + (Math.random() - 0.5) * 0.01,
-            lng: -122.4194 + (Math.random() - 0.5) * 0.01,
-            altitude: 300,
-          },
+          position: this.generateRandomPosition(this.platform!.position, 2000),
+          //   position: {
+          //     lat: 37.7749 + (Math.random() - 0.5) * 0.01,
+          //     lng: -122.4194 + (Math.random() - 0.5) * 0.01,
+          //     altitude: 300,
+          //   },
           speed: 50,
           heading: Math.random() * 360,
           threatLevel: 4,
@@ -313,6 +378,73 @@ export class SocketService {
     } catch (error) {
       console.error('Error creating test drones:', error);
       throw error;
+    }
+  }
+
+  private generateRandomPosition(
+    platformPos: { lat: number; lng: number },
+    maxRange: number = 2000
+  ) {
+    // maxRange in meters
+    const r = Math.random() * maxRange;
+    const theta = Math.random() * 2 * Math.PI;
+
+    // Convert to lat/lng (approximate conversion)
+    const lat = platformPos.lat + (r * Math.cos(theta)) / 111320; // 1 degree lat ≈ 111.32km
+    const lng =
+      platformPos.lng +
+      (r * Math.sin(theta)) /
+        (111320 * Math.cos((platformPos.lat * Math.PI) / 180));
+
+    return {
+      lat,
+      lng,
+      altitude: 100 + Math.random() * 400, // Random altitude between 100-500m
+    };
+  }
+
+  // Add new method for handling drone hits
+  public async handleDroneHit(droneId: string) {
+    try {
+      const drone = await Drone.findOne({ droneId });
+      if (drone) {
+        // Update drone status to hit
+        drone.status = 'Hit';
+        drone.isEngaged = true;
+        drone.engagementHistory.push({
+          timestamp: new Date(),
+          action: 'Hit',
+          details: 'Target hit by XM914E1 30mm cannon',
+        });
+
+        await drone.save();
+
+        // Broadcast the update to all clients
+        this.io.emit('droneHit', {
+          droneId: drone.droneId,
+          status: drone.status,
+          timestamp: new Date(),
+        });
+
+        // After a short delay, update to destroyed status
+        setTimeout(async () => {
+          drone.status = 'Destroyed';
+          drone.engagementHistory.push({
+            timestamp: new Date(),
+            action: 'Destroyed',
+            details: 'Target destroyed by XM914E1',
+          });
+
+          await drone.save();
+          this.io.emit('droneDestroyed', {
+            droneId: drone.droneId,
+            status: drone.status,
+            timestamp: new Date(),
+          });
+        }, 2000); // 2 second delay between hit and destroyed
+      }
+    } catch (error) {
+      console.error('Error handling drone hit:', error);
     }
   }
 }

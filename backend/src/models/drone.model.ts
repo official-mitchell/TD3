@@ -5,7 +5,9 @@ export type DroneStatus =
   | 'Detected'
   | 'Identified'
   | 'Confirmed'
-  | 'Engagement Ready';
+  | 'Engagement Ready'
+  | 'Hit'
+  | 'Destroyed';
 // Interface for type safety
 export interface IDrone extends Document {
   droneId: string;
@@ -39,7 +41,14 @@ const DroneSchema: Schema = new Schema({
   },
   status: {
     type: String,
-    enum: ['Detected', 'Identified', 'Confirmed', 'Engagement Ready'],
+    enum: [
+      'Detected',
+      'Identified',
+      'Confirmed',
+      'Engagement Ready',
+      'Hit',
+      'Destroyed',
+    ],
     required: true,
   },
   position: {
@@ -67,7 +76,6 @@ const DroneSchema: Schema = new Schema({
 });
 
 export default mongoose.model<IDrone>('Drone', DroneSchema);
-
 // import mongoose, { Schema, Document } from 'mongoose';
 
 // // Interface for type safety

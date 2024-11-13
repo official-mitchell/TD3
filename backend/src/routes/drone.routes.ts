@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Drone from '../models/drone.model';
 import { Request, Response } from 'express';
+import WeaponPlatform from '../models/weapon-platform.model';
 
 // Add console.log at the top to verify the file is loaded
 console.log('Loading drone routes...');
@@ -178,6 +179,74 @@ router.post('/drones/clear', async (req: Request, res: Response) => {
   try {
     await Drone.deleteMany({});
     return res.json({ message: 'All drones cleared' });
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+// Initialize weapon platform
+router.post('/platform/init', async (req: Request, res: Response) => {
+  try {
+    // Remove any existing platform
+    await WeaponPlatform.deleteMany({});
+
+    // Create new platform at default position
+    const platform = new WeaponPlatform({
+      position: {
+        lat: 37.7749, // Default position (can be made configurable)
+        lng: -122.4194,
+      },
+      heading: 0,
+      isActive: true,
+    });
+
+    await platform.save();
+    return res.json(platform);
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+// Get platform status
+router.get('/platform/status', async (req: Request, res: Response) => {
+  try {
+    const platform = await WeaponPlatform.findOne({ isActive: true });
+    if (!platform) {
+      return res
+        .status(404)
+        .json({ message: 'No active weapon platform found' });
+    }
+    return res.json(platform);
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+// Test platform initialization and status
+router.get('/platform/test', async (req: Request, res: Response) => {
+  try {
+    // Init platform
+    const platform = await WeaponPlatform.findOne({ isActive: true });
+
+    // Get nearby drones
+    const drones = await Drone.find();
+
+    // Return combined status
+    return res.json({
+      platform: platform,
+      droneCount: drones.length,
+      platformStatus: platform ? 'active' : 'not initialized',
+    });
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+router.post('/drones/:droneId/hit', async (req: Request, res: Response) => {
+  try {
+    const socketService = req.app.get('socketService');
+    await socketService.handleDroneHit(req.params.droneId);
+    return res.json({ success: true });
   } catch (error) {
     return res.status(500).json({ error: String(error) });
   }
