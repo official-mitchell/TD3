@@ -32,8 +32,8 @@ export default defineConfig({
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@stores': path.resolve(__dirname, './src/stores'),
       '@utils': path.resolve(__dirname, './src/utils'),
-      '@types': path.resolve(__dirname, './src/types'),
       '@constants': path.resolve(__dirname, './src/constants'),
+      '@td3/shared-types': path.resolve(__dirname, '../libs/shared-types/src/index.ts'),
     },
   },
 

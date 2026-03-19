@@ -11,6 +11,10 @@
     }
   ],
   "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "@td3/shared-types": ["libs/shared-types/src/index.ts"]
+    },
     "esModuleInterop": true,
     "declaration": true,
     "composite": true

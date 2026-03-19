@@ -1,41 +1,19 @@
+/**
+ * Drone Mongoose model. Uses shared types from @td3/shared-types.
+ * Schema mirrors IDrone exactly per Implementation Plan Step 1.3.1.
+ */
 import mongoose, { Schema, Document } from 'mongoose';
+import type { DroneType, DroneStatus, IDrone } from '@td3/shared-types';
 
-export type DroneType = 'Quadcopter' | 'FixedWing' | 'VTOL' | 'Unknown';
-export type DroneStatus =
-  | 'Detected'
-  | 'Identified'
-  | 'Confirmed'
-  | 'Engagement Ready'
-  | 'Hit'
-  | 'Destroyed';
-// Interface for type safety
-export interface IDrone extends Document {
-  droneId: string;
-  droneType: DroneType;
-  status: DroneStatus;
-  position: {
-    lat: number;
-    lng: number;
-    altitude: number;
-  };
-  speed: number;
-  heading: number;
-  threatLevel: number;
+export interface IDroneDocument extends Omit<IDrone, 'lastUpdated'>, Document {
   lastUpdated: Date;
-  isEngaged: boolean;
-  engagementHistory: any[];
 }
 
-export interface IDroneDocument extends IDrone, Document {
-  droneType: DroneType;
-}
-
-// The actual schema
-const DroneSchema: Schema = new Schema({
+const DroneSchema: Schema = new Schema<IDroneDocument>({
   droneId: { type: String, required: true, unique: true },
   droneType: {
     type: String,
-    enum: ['Quadcopter', 'Fixed Wing', 'VTOL', 'Unknown'],
+    enum: ['Quadcopter', 'FixedWing', 'VTOL', 'Unknown'],
     default: 'Unknown',
     required: true,
   },
@@ -58,62 +36,9 @@ const DroneSchema: Schema = new Schema({
   },
   speed: { type: Number, required: true },
   heading: { type: Number, required: true },
-  threatLevel: { type: Number, required: true, min: 1, max: 5 },
+  threatLevel: { type: Number, required: true },
   lastUpdated: { type: Date, default: Date.now },
-  isEngaged: { type: Boolean, default: false },
-  engagementHistory: [{ type: Schema.Types.Mixed }],
-  capabilities: [
-    {
-      type: String,
-      enum: ['Surveillance', 'Cargo', 'Combat', 'Unknown'],
-    },
-  ],
-  size: {
-    type: String,
-    enum: ['Small', 'Medium', 'Large'],
-    default: 'Medium',
-  },
 });
 
-export default mongoose.model<IDrone>('Drone', DroneSchema);
-// import mongoose, { Schema, Document } from 'mongoose';
-
-// // Interface for type safety
-// export interface IDrone extends Document {
-//   droneId: string;
-//   status: 'Detected' | 'Identified' | 'Confirmed' | 'Engagement Ready';
-//   position: {
-//     lat: number;
-//     lng: number;
-//     altitude: number;
-//   };
-//   speed: number;
-//   heading: number;
-//   threatLevel: number;
-//   lastUpdated: Date;
-//   isEngaged: boolean;
-//   engagementHistory: any[]; // We can make this more specific if needed
-// }
-
-// // The actual schema
-// const DroneSchema: Schema = new Schema({
-//   droneId: { type: String, required: true, unique: true },
-//   status: {
-//     type: String,
-//     enum: ['Detected', 'Identified', 'Confirmed', 'Engagement Ready'],
-//     required: true,
-//   },
-//   position: {
-//     lat: { type: Number, required: true },
-//     lng: { type: Number, required: true },
-//     altitude: { type: Number, required: true },
-//   },
-//   speed: { type: Number, required: true },
-//   heading: { type: Number, required: true },
-//   threatLevel: { type: Number, required: true, min: 1, max: 5 },
-//   lastUpdated: { type: Date, default: Date.now },
-//   isEngaged: { type: Boolean, default: false },
-//   engagementHistory: [{ type: Schema.Types.Mixed }],
-// });
-
-// export default mongoose.model<IDrone>('Drone', DroneSchema);
+export { type DroneType, type DroneStatus, type IDrone } from '@td3/shared-types';
+export default mongoose.model<IDroneDocument>('Drone', DroneSchema);

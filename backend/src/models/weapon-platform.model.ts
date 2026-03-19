@@ -1,13 +1,9 @@
+/**
+ * WeaponPlatform Mongoose model. Uses shared types from @td3/shared-types.
+ * Schema mirrors IWeaponPlatform with ammoCount and killCount per Implementation Plan Step 1.3.2.
+ */
 import mongoose, { Document, Schema } from 'mongoose';
-
-export interface IWeaponPlatform {
-  position: {
-    lat: number;
-    lng: number;
-  };
-  heading: number; // Current direction turret is facing (0-359 degrees)
-  isActive: boolean;
-}
+import type { IWeaponPlatform } from '@td3/shared-types';
 
 export interface IWeaponPlatformDocument extends IWeaponPlatform, Document {}
 
@@ -27,8 +23,17 @@ const WeaponPlatformSchema = new Schema<IWeaponPlatformDocument>({
     type: Boolean,
     default: true,
   },
+  ammoCount: {
+    type: Number,
+    default: 300,
+  },
+  killCount: {
+    type: Number,
+    default: 0,
+  },
 });
 
+export { type IWeaponPlatform } from '@td3/shared-types';
 export default mongoose.model<IWeaponPlatformDocument>(
   'WeaponPlatform',
   WeaponPlatformSchema

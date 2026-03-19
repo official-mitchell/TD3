@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useDroneStore } from '../store/droneStore';
-import { Drone } from '../types';
+import type { IDrone } from '@td3/shared-types';
 
 const SOCKET_URL = 'http://localhost:3333';
 
@@ -17,11 +17,11 @@ export const useSocket = () => {
       console.log('Connected to server');
     });
 
-    socket.on('initialDroneData', (data: { drones: Drone[] }) => {
+    socket.on('initialDroneData', (data: { drones: IDrone[] }) => {
       data.drones.forEach((drone) => actions.addDrone(drone));
     });
 
-    socket.on('droneUpdate', (drone: Drone) => {
+    socket.on('droneUpdate', (drone: IDrone) => {
       actions.updateDrone(drone);
     });
 

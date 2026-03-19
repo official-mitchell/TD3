@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@td3/shared-types": ["libs/shared-types/src/index.ts"]
+    },
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "composite": true,

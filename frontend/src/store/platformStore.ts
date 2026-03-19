@@ -1,37 +1,33 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { Platform, Position, KillLogEntry } from '../types';
+import type { IWeaponPlatform, IEngagementRecord } from '@td3/shared-types';
 
 // Type Definitions
 interface PlatformState {
-  platform: Platform;
+  platform: IWeaponPlatform;
   turretStatus: 'IDLE' | 'TARGETING' | 'FIRING';
   currentTarget: string | null;
   isEngaging: boolean;
-  killLog: KillLogEntry[];
+  killLog: IEngagementRecord[];
 
   // Actions - functions that modify our state
   actions: {
-    updatePlatform: (platform: Platform) => void;
+    updatePlatform: (platform: IWeaponPlatform) => void;
     setTurretStatus: (status: PlatformState['turretStatus']) => void;
     setCurrentTarget: (droneId: string | null) => void;
     setEngaging: (isEngaging: boolean) => void;
-    addKill: (kill: KillLogEntry) => void;
+    addKill: (kill: IEngagementRecord) => void;
     updateHeading: (heading: number) => void;
   };
 }
 
 // Default Values
-const DEFAULT_POSITION: Position = {
-  lat: 37.7749,
-  lng: -122.4194,
-  altitude: 0,
-};
-
-const initialPlatform: Platform = {
-  position: DEFAULT_POSITION,
+const initialPlatform: IWeaponPlatform = {
+  position: { lat: 37.7749, lng: -122.4194 },
   heading: 0,
   isActive: true,
+  ammoCount: 300,
+  killCount: 0,
 };
 
 // Create Zustand Store — the store is a function that returns a set of state and actions

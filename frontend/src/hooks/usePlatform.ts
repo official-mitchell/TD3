@@ -2,7 +2,6 @@ import { useCallback, useEffect } from 'react';
 import { usePlatformStore, usePlatformActions } from '../store/platformStore';
 import { useDroneStore } from '../store/droneStore';
 import { calculateBearing } from '../utils/calculations';
-// import { Platform, Position } from '../types';
 
 export const usePlatform = () => {
   // State Access - Get required state from our stores

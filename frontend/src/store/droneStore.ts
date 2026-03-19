@@ -1,16 +1,16 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { Drone, KillLogEntry } from '../types';
+import type { IDrone, IEngagementRecord } from '@td3/shared-types';
 
 interface DroneState {
-  drones: Map<string, Drone>;
+  drones: Map<string, IDrone>;
   selectedTargets: Set<string>;
-  killLog: KillLogEntry[];
+  killLog: IEngagementRecord[];
   actions: {
-    addDrone: (drone: Drone) => void;
-    updateDrone: (drone: Drone) => void;
+    addDrone: (drone: IDrone) => void;
+    updateDrone: (drone: IDrone) => void;
     selectTarget: (droneId: string) => void;
-    addKill: (kill: KillLogEntry) => void;
+    addKill: (kill: IEngagementRecord) => void;
     clearSelected: () => void;
   };
 }

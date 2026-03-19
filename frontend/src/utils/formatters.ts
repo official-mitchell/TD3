@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { DroneType, DroneStatus } from '../types';
+import type { DroneType, DroneStatus } from '@td3/shared-types';
 
 export const formatDistance = (meters: number): string => {
   return `${(meters / 1000).toFixed(2)}km`;

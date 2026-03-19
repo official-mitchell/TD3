@@ -1,6 +1,7 @@
-import { Position } from '../types';
+/** Accepts any position-like object with lat/lng (IPosition or IWeaponPlatform.position) */
+type LatLng = { lat: number; lng: number };
 
-export const calculateDistance = (pos1: Position, pos2: Position): number => {
+export const calculateDistance = (pos1: LatLng, pos2: LatLng): number => {
   const R = 6371e3; // Earth's radius in meters
   const φ1 = (pos1.lat * Math.PI) / 180;
   const φ2 = (pos2.lat * Math.PI) / 180;
@@ -16,7 +17,7 @@ export const calculateDistance = (pos1: Position, pos2: Position): number => {
   return R * c;
 };
 
-export const calculateBearing = (pos1: Position, pos2: Position) => {
+export const calculateBearing = (pos1: LatLng, pos2: LatLng) => {
   const φ1 = (pos1.lat * Math.PI) / 180;
   const φ2 = (pos2.lat * Math.PI) / 180;
   const λ1 = (pos1.lng * Math.PI) / 180;

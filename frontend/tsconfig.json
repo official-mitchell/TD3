@@ -9,8 +9,8 @@
       "@hooks/*": ["src/hooks/*"],
       "@stores/*": ["src/stores/*"],
       "@utils/*": ["src/utils/*"],
-      "@types/*": ["src/types/*"],
-      "@constants/*": ["src/constants/*"]
+      "@constants/*": ["src/constants/*"],
+      "@td3/shared-types": ["../libs/shared-types/src/index.ts"]
     },
     "allowJs": false,
     "esModuleInterop": false,

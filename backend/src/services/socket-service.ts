@@ -1,3 +1,7 @@
+/**
+ * Socket.IO service — telemetry simulation and engagement handling.
+ * Phase 2.1 cleanup: removed legacy handleDroneHit; engagement:fire handler to be added per Implementation Plan 2.1.
+ */
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import Drone, {
@@ -116,19 +120,25 @@ export class SocketService {
 
   private async initializePlatform() {
     try {
-      // Get or create platform
+      // Get or create platform (ammoCount, killCount per IWeaponPlatform spec)
       let platform = await WeaponPlatform.findOne({ isActive: true });
       if (!platform) {
         platform = await WeaponPlatform.create({
-          position: {
-            lat: 37.7749,
-            lng: -122.4194,
-          },
+          position: { lat: 37.7749, lng: -122.4194 },
           heading: 0,
           isActive: true,
+          ammoCount: 300,
+          killCount: 0,
         });
       }
-      this.platform = platform;
+      // Ensure IWeaponPlatform shape (legacy docs may lack ammoCount/killCount)
+      this.platform = {
+        position: platform.position,
+        heading: platform.heading,
+        isActive: platform.isActive,
+        ammoCount: platform.ammoCount ?? 300,
+        killCount: platform.killCount ?? 0,
+      };
       console.log('Weapon platform initialized:', this.platform);
     } catch (error) {
       console.error('Error initializing weapon platform:', error);
@@ -213,23 +223,13 @@ export class SocketService {
           drone.status = statuses[Math.floor(Math.random() * statuses.length)];
         }
 
-        // Randomly update threat level
+        // Randomly update threat level (0.0–1.0 per IDrone spec)
         if (Math.random() < this.simulationConfig.threatChangeProb) {
-          drone.threatLevel = Math.floor(Math.random() * 5) + 1;
+          drone.threatLevel = Math.random();
         }
 
         drone.lastUpdated = new Date();
         await drone.save();
-
-        // Add to engagement history if status changed
-        if (drone.status === 'Engagement Ready') {
-          drone.engagementHistory.push({
-            timestamp: new Date(),
-            action: 'Status Change',
-            details: 'Drone ready for engagement',
-          });
-          await drone.save();
-        }
 
         this.io.emit('droneUpdate', drone);
       }
@@ -301,52 +301,34 @@ export class SocketService {
       await Drone.deleteMany({});
       console.log('Cleared existing drones');
 
-      // Create one of each type
+      // Create one of each type (threatLevel 0.0–1.0 per IDrone spec)
       const testDrones = [
         {
           droneId: 'QUAD-001',
           droneType: 'Quadcopter',
           status: 'Detected',
           position: this.generateRandomPosition(this.platform!.position, 2000),
-          //   position: {
-          //     lat: 37.7749 + (Math.random() - 0.5) * 0.01,
-          //     lng: -122.4194 + (Math.random() - 0.5) * 0.01,
-          //     altitude: 100,
-          //   },
           speed: 15,
           heading: Math.random() * 360,
-          threatLevel: 2,
-          isEngaged: false,
+          threatLevel: 0.4,
         },
         {
           droneId: 'FIXED-001',
-          droneType: 'Fixed Wing',
+          droneType: 'FixedWing',
           status: 'Detected',
           position: this.generateRandomPosition(this.platform!.position, 2000),
-          //   position: {
-          //     lat: 37.7749 + (Math.random() - 0.5) * 0.01,
-          //     lng: -122.4194 + (Math.random() - 0.5) * 0.01,
-          //     altitude: 500,
-          //   },
           speed: 100,
           heading: Math.random() * 360,
-          threatLevel: 3,
-          isEngaged: false,
+          threatLevel: 0.6,
         },
         {
           droneId: 'VTOL-001',
           droneType: 'VTOL',
           status: 'Detected',
           position: this.generateRandomPosition(this.platform!.position, 2000),
-          //   position: {
-          //     lat: 37.7749 + (Math.random() - 0.5) * 0.01,
-          //     lng: -122.4194 + (Math.random() - 0.5) * 0.01,
-          //     altitude: 300,
-          //   },
           speed: 50,
           heading: Math.random() * 360,
-          threatLevel: 4,
-          isEngaged: false,
+          threatLevel: 0.5,
         },
       ];
 
@@ -403,109 +385,6 @@ export class SocketService {
     };
   }
 
-  // Add new method for handling drone hits
-  public async handleDroneHit(droneId: string) {
-    try {
-      const drone = await Drone.findOne({ droneId });
-      if (drone) {
-        // Update drone status to hit
-        drone.status = 'Hit';
-        drone.isEngaged = true;
-        drone.engagementHistory.push({
-          timestamp: new Date(),
-          action: 'Hit',
-          details: 'Target hit by XM914E1 30mm cannon',
-        });
-
-        await drone.save();
-
-        // Broadcast the update to all clients
-        this.io.emit('droneHit', {
-          droneId: drone.droneId,
-          status: drone.status,
-          timestamp: new Date(),
-        });
-
-        // After a short delay, update to destroyed status
-        setTimeout(async () => {
-          drone.status = 'Destroyed';
-          drone.engagementHistory.push({
-            timestamp: new Date(),
-            action: 'Destroyed',
-            details: 'Target destroyed by XM914E1',
-          });
-
-          await drone.save();
-          this.io.emit('droneDestroyed', {
-            droneId: drone.droneId,
-            status: drone.status,
-            timestamp: new Date(),
-          });
-        }, 2000); // 2 second delay between hit and destroyed
-      }
-    } catch (error) {
-      console.error('Error handling drone hit:', error);
-    }
-  }
 }
 
 export default SocketService;
-
-//   TODO: Potentially uncomment this?
-//   public async createTestDrones(count: number = 3) {
-//     try {
-//       for (let i = 0; i < count; i++) {
-//         const drone = new Drone({
-//           droneId: `TEST${i + 1}`,
-//           status: 'Detected',
-//           position: {
-//             lat: 37.7749 + (Math.random() - 0.5) * 0.1,
-//             lng: -122.4194 + (Math.random() - 0.5) * 0.1,
-//             altitude: 100 + Math.random() * 200,
-//           },
-//           speed: 15.5,
-//           heading: Math.random() * 360,
-//           threatLevel: Math.floor(Math.random() * 5) + 1,
-//           isEngaged: false,
-//         });
-//         await drone.save();
-//       }
-//     } catch (error) {
-//       console.error('Error creating test drones:', error);
-//     }
-//   }
-// }
-
-// Test Implementaiton methods
-// Method to broadcast drone updates to all connected clients
-//   public broadcastDroneUpdate(droneData: IDrone) {
-//     this.io.emit('droneUpdate', droneData);
-//   }
-
-//   // Method to broadcast threat alerts
-//   public broadcastThreatAlert(threatData: any) {
-//     this.io.emit('threatAlert', threatData);
-//   }
-
-// // Test implementation
-// console.log(`Update requested for drone: ${droneId}`);
-// try {
-//   // Find the drone
-//   const drone = await Drone.findOne({ droneId });
-//   if (drone) {
-//     // Simulate movement
-//     drone.position.lat += (Math.random() - 0.5) * 0.001; // Small random change
-//     drone.position.lng += (Math.random() - 0.5) * 0.001;
-//     drone.position.altitude += (Math.random() - 0.5) * 10;
-//     drone.lastUpdated = new Date();
-
-//     // Save changes
-//     await drone.save();
-
-//     // Broadcast update
-//     this.io.emit('droneUpdate', drone);
-//   }
-// } catch (error) {
-//   console.error('Error updating drone:', error);
-//   socket.emit('error', { message: 'Error updating drone' });
-// }

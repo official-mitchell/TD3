@@ -1,10 +1,10 @@
+/**
+ * Drone and platform REST routes. Phase 2.1 cleanup: removed POST /hit; history stub for TelemetryLog.
+ */
 import { Router } from 'express';
 import Drone from '../models/drone.model';
 import { Request, Response } from 'express';
 import WeaponPlatform from '../models/weapon-platform.model';
-
-// Add console.log at the top to verify the file is loaded
-console.log('Loading drone routes...');
 
 const router = Router();
 
@@ -56,14 +56,11 @@ router.get('/drones/:droneId', async (req: Request, res: Response) => {
   }
 });
 
-// GET drone history
+// GET drone history (TelemetryLog per Implementation Plan 2.3 — stub until model exists)
 router.get('/drones/:droneId/history', async (req: Request, res: Response) => {
   try {
-    const drone = await Drone.findOne({ droneId: req.params.droneId });
-    if (!drone) {
-      return res.status(404).json({ message: 'Drone not found' });
-    }
-    return res.json(drone.engagementHistory);
+    // TODO Phase 2.2/2.3: Query TelemetryLog by droneId, sort by timestamp desc, limit 50
+    return res.json([]);
   } catch (error) {
     return res
       .status(500)
@@ -95,14 +92,7 @@ router.post('/drones/test', async (req: Request, res: Response) => {
       },
       speed: 15.5,
       heading: 180,
-      threatLevel: 3,
-      engagementHistory: [
-        {
-          timestamp: new Date(),
-          action: 'Initial Detection',
-          details: 'Drone first spotted',
-        },
-      ],
+      threatLevel: 0.5,
     });
 
     await testDrone.save();
@@ -237,16 +227,6 @@ router.get('/platform/test', async (req: Request, res: Response) => {
       droneCount: drones.length,
       platformStatus: platform ? 'active' : 'not initialized',
     });
-  } catch (error) {
-    return res.status(500).json({ error: String(error) });
-  }
-});
-
-router.post('/drones/:droneId/hit', async (req: Request, res: Response) => {
-  try {
-    const socketService = req.app.get('socketService');
-    await socketService.handleDroneHit(req.params.droneId);
-    return res.json({ success: true });
   } catch (error) {
     return res.status(500).json({ error: String(error) });
   }
