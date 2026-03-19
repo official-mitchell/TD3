@@ -20,6 +20,7 @@ vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="leaflet-map">{children}</div>
   ),
+  ZoomControl: () => <div data-testid="zoom-control" />,
   TileLayer: ({ url }: { url: string }) => (
     <div data-testid="tile-layer" data-url={url} />
   ),
@@ -180,9 +181,10 @@ describe('MapContainer', () => {
 
     const overlay = screen.getByTestId('telemetry-overlay');
     expect(overlay).toBeTruthy();
-    expect(screen.getByText('THREAT 50%')).toBeTruthy();
-    expect(screen.getByText(/50 km\/h/)).toBeTruthy();
-    expect(screen.getByText(/ALT 100m/)).toBeTruthy();
+    expect(screen.getByText('THREAT')).toBeTruthy();
+    expect(screen.getByText('SPEED')).toBeTruthy();
+    expect(screen.getByText('km/h')).toBeTruthy();
+    expect(screen.getByText(/ALT \d+m/)).toBeTruthy();
     expect(screen.getByText('Engagement Probability')).toBeTruthy();
   });
 

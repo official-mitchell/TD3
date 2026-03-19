@@ -1,17 +1,17 @@
 /**
  * ThreatMeter. Horizontal bar with gradient fill.
  * % shown inside bar: in filled section if >50%, in empty section if ≤50%.
- * Question mark icon with hover tooltip.
+ * Question mark icon inline with THREAT label.
  */
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import Tooltip from '@mui/material/Tooltip';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
-const WIDTH = 140;
-const HEIGHT = 44;
-const BAR_WIDTH = 120;
-const BAR_HEIGHT = 14;
+const WIDTH = 180;
+const HEIGHT = 28;
+const BAR_WIDTH = 160;
+const BAR_HEIGHT = 18;
 
 const TOOLTIP_TEXT =
   'Threat level reflects the assessed risk to the craft from nearby hostiles or hazards. Higher values indicate greater danger.';
@@ -79,23 +79,16 @@ export const ThreatMeter: React.FC<ThreatMeterProps> = ({ value }) => {
       .attr('font-family', 'JetBrains Mono, monospace')
       .text(pct);
 
-    // Label below bar
-    g.append('text')
-      .attr('x', BAR_WIDTH / 2)
-      .attr('y', 32)
-      .attr('text-anchor', 'middle')
-      .attr('fill', '#E8F4FD')
-      .attr('font-size', '11px')
-      .attr('font-family', 'JetBrains Mono, monospace')
-      .text('THREAT');
+    // Label row (THREAT + icon rendered in JSX below)
   }, [value]);
 
   return (
-    <div className="flex flex-col items-center gap-0.5">
-      <div className="flex items-center gap-1">
-        <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" />
+    <div className="flex flex-col items-center gap-1">
+      <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" />
+      <div className="flex items-center justify-center gap-1.5">
+        <span className="text-[11px] font-mono text-[#E8F4FD]">THREAT</span>
         <Tooltip title={TOOLTIP_TEXT} arrow placement="top">
-          <HelpOutlineIcon className="cursor-help text-cyan-400/80 hover:text-cyan-300" sx={{ fontSize: 16 }} />
+          <HelpOutlineIcon className="cursor-help text-cyan-400/80 hover:text-cyan-300" sx={{ fontSize: 14 }} />
         </Tooltip>
       </div>
     </div>

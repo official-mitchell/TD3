@@ -17,8 +17,8 @@ import { EngagementProbability } from '@components/gauges/EngagementProbability'
 import { calculateDistance } from '../../utils/calculations';
 import type { IDrone } from '@td3/shared-types';
 
-const SQUARE_SIZE = 140;
-const BAR_CONTAINER_HEIGHT = 56;
+const SQUARE_SIZE = 180;
+const BAR_CONTAINER_HEIGHT = 72;
 
 const containerStyle = {
   background: 'rgba(15, 25, 41, 0.4)',
@@ -45,10 +45,6 @@ export const TelemetryOverlay: React.FC = () => {
       data-testid="telemetry-overlay"
       className="absolute bottom-4 left-4 z-[600] pointer-events-auto flex flex-col gap-2"
     >
-      <div className="text-xs font-bold text-cyan-400/90 uppercase tracking-wider mb-0.5">
-        {drone.droneId}
-      </div>
-
       {/* Speed – square container */}
       <div
         className="flex flex-col items-center justify-center p-2"

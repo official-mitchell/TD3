@@ -5,7 +5,7 @@
  * TelemetryOverlay: floating mini dashboard over map when drone selected.
  */
 import React, { useState, useEffect } from 'react';
-import { MapContainer as LeafletMap, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer as LeafletMap, TileLayer, ZoomControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useDroneStore } from '../../store/droneStore';
@@ -142,8 +142,10 @@ export const MapContainer: React.FC = () => {
         zoom={DEFAULT_ZOOM}
         className="h-full w-full"
         scrollWheelZoom={true}
+        zoomControl={false}
       >
         <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url={TILE_URL} />
+        <ZoomControl position="bottomright" />
         <MapContent />
       </LeafletMap>
     </div>

@@ -5,9 +5,9 @@
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 
-const WIDTH = 100;
-const HEIGHT = 100;
-const RADIUS = 42;
+const WIDTH = 180;
+const HEIGHT = 180;
+const RADIUS = 50;
 
 export interface CompassSpeedGaugeProps {
   heading: number;
@@ -22,7 +22,7 @@ export const CompassSpeedGauge: React.FC<CompassSpeedGaugeProps> = ({ heading, s
     d3.select(svgRef.current).selectAll('*').remove();
 
     const cx = WIDTH / 2;
-    const cy = HEIGHT / 2;
+    const cy = HEIGHT / 2 + 12;
     const g = d3.select(svgRef.current).append('g').attr('transform', `translate(${cx}, ${cy})`);
 
     // Compass circle (track)
@@ -59,7 +59,7 @@ export const CompassSpeedGauge: React.FC<CompassSpeedGaugeProps> = ({ heading, s
     const needle = g.append('g').attr('transform', `rotate(${heading})`);
     needle
       .append('path')
-      .attr('d', `M 0 ${-RADIUS + 8} L -4 8 L 0 ${RADIUS - 4} L 4 8 Z`)
+      .attr('d', `M 0 ${-RADIUS + 10} L -5 8 L 0 ${RADIUS - 5} L 5 8 Z`)
       .attr('fill', '#0EA5E9')
       .attr('stroke', '#E8F4FD')
       .attr('stroke-width', 1);
@@ -67,36 +67,36 @@ export const CompassSpeedGauge: React.FC<CompassSpeedGaugeProps> = ({ heading, s
     // Speed readout in center
     g.append('text')
       .attr('text-anchor', 'middle')
-      .attr('y', 0)
+      .attr('y', -8)
       .attr('fill', '#E8F4FD')
-      .attr('font-size', '12px')
+      .attr('font-size', '16px')
       .attr('font-weight', 'bold')
       .attr('font-family', 'JetBrains Mono, monospace')
       .text(`${String(Math.round(speed)).padStart(2, '0')}`);
 
     g.append('text')
       .attr('text-anchor', 'middle')
-      .attr('y', 14)
+      .attr('y', 10)
       .attr('fill', '#94A3B8')
-      .attr('font-size', '8px')
+      .attr('font-size', '10px')
       .attr('font-family', 'JetBrains Mono, monospace')
       .text('km/h');
 
-    // Heading degrees (no HDG prefix), 30% larger font: 9 * 1.3 ≈ 12
+    // Heading degrees (no HDG prefix)
     g.append('text')
       .attr('text-anchor', 'middle')
-      .attr('y', RADIUS + 14)
+      .attr('y', RADIUS + 20)
       .attr('fill', '#E8F4FD')
-      .attr('font-size', '12px')
+      .attr('font-size', '14px')
       .attr('font-family', 'JetBrains Mono, monospace')
       .text(`${heading.toFixed(0)}°`);
 
     // "HEADING" label below
     g.append('text')
       .attr('text-anchor', 'middle')
-      .attr('y', RADIUS + 28)
+      .attr('y', RADIUS + 38)
       .attr('fill', '#E8F4FD')
-      .attr('font-size', '9px')
+      .attr('font-size', '11px')
       .attr('font-family', 'JetBrains Mono, monospace')
       .text('HEADING');
   }, [heading, speed]);
