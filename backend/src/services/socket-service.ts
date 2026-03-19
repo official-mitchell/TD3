@@ -55,6 +55,9 @@ export class SocketService {
       console.log('Client connected');
 
       this.emitInitialDroneData(socket);
+      if (this.platform) {
+        socket.emit('platform:status', this.platform);
+      }
 
       socket.on('requestDroneUpdate', async (droneId: string) => {
         await this.updateDrone(droneId);

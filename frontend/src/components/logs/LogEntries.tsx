@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import {
   ChevronDown,
-  // ChevronUp,
+  Circle,
   Plane,
-  // Copter
 } from 'lucide-react';
 
 interface BaseLogEntry {
@@ -36,13 +35,13 @@ interface BaseLogEntry {
 //   threatLevel: number; // 1-5
 // }
 
-interface EngagementLogEntry extends BaseLogEntry {
+export interface EngagementLogEntry extends BaseLogEntry {
   status: 'IDENTIFIED' | 'ENGAGED' | 'DESTROYED';
   altitude: number;
   threatLevel: number;
 }
 
-interface UpdateLogEntry extends BaseLogEntry {
+export interface UpdateLogEntry extends BaseLogEntry {
   status: 'DETECTED' | 'IDENTIFIED' | 'TRACKING';
   altitude: number;
   speed: number;
@@ -55,7 +54,7 @@ const DroneIcon: React.FC<{ type: string }> = ({ type }) => {
       return <Plane className="w-4 h-4 text-blue-400" />;
     case 'Quadcopter':
     case 'VTOL':
-      return <Copter className="w-4 h-4 text-blue-400" />;
+      return <Circle className="w-4 h-4 text-blue-400" />;
     default:
       return null;
   }

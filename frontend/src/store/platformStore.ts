@@ -1,116 +1,23 @@
+/**
+ * Platform store. Per Implementation Plan 3.4.
+ * Holds platform: IWeaponPlatform | null, updatePlatform only.
+ */
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { IWeaponPlatform, IEngagementRecord } from '@td3/shared-types';
+import type { IWeaponPlatform } from '@td3/shared-types';
 
-// Type Definitions
 interface PlatformState {
-  platform: IWeaponPlatform;
-  turretStatus: 'IDLE' | 'TARGETING' | 'FIRING';
-  currentTarget: string | null;
-  isEngaging: boolean;
-  killLog: IEngagementRecord[];
-
-  // Actions - functions that modify our state
-  actions: {
-    updatePlatform: (platform: IWeaponPlatform) => void;
-    setTurretStatus: (status: PlatformState['turretStatus']) => void;
-    setCurrentTarget: (droneId: string | null) => void;
-    setEngaging: (isEngaging: boolean) => void;
-    addKill: (kill: IEngagementRecord) => void;
-    updateHeading: (heading: number) => void;
-  };
+  platform: IWeaponPlatform | null;
+  updatePlatform: (platform: IWeaponPlatform) => void;
 }
 
-// Default Values
-const initialPlatform: IWeaponPlatform = {
-  position: { lat: 37.7749, lng: -122.4194 },
-  heading: 0,
-  isActive: true,
-  ammoCount: 300,
-  killCount: 0,
-};
-
-// Create Zustand Store — the store is a function that returns a set of state and actions
 export const usePlatformStore = create<PlatformState>()(
   devtools(
-    // Enables Redux DevTools integration
     (set) => ({
-      // Initial state
-      platform: initialPlatform,
-      turretStatus: 'IDLE',
-      currentTarget: null,
-      isEngaging: false,
-      killLog: [],
+      platform: null,
 
-      // Actions that modify state
-      actions: {
-        // Update the entire platform object
-        updatePlatform: (platform) => set({ platform }),
-
-        // Update just the turret status
-        setTurretStatus: (status) => set({ turretStatus: status }),
-
-        // Update the current target
-        setCurrentTarget: (droneId) => set({ currentTarget: droneId }),
-
-        // Update the engaging status
-        setEngaging: (isEngaging) => set({ isEngaging }),
-
-        // Add a kill to the kill log
-        addKill: (kill) =>
-          set((state) => ({
-            killLog: [kill, ...state.killLog],
-          })),
-
-        // Update the heading
-        updateHeading: (heading) =>
-          set((state) => ({
-            platform: {
-              ...state.platform,
-              heading,
-            },
-          })),
-      },
+      updatePlatform: (platform) => set({ platform }),
     }),
     { name: 'Platform Store' }
   )
 );
-
-// Selector hooks for common state access patterns, convenient ways to access specific parts of state
-export const usePlatformPosition = () =>
-  usePlatformStore((state) => state.platform.position);
-
-export const useTurretStatus = () =>
-  usePlatformStore((state) => state.turretStatus);
-
-export const useKillLog = () => usePlatformStore((state) => state.killLog);
-
-export const usePlatformActions = () =>
-  usePlatformStore((state) => state.actions);
-
-// Computed value helpers, derived state based on multiple state values
-export const useTurretEngagementStatus = () => {
-  const { turretStatus, isEngaging, currentTarget } = usePlatformStore();
-
-  return {
-    isReady: turretStatus === 'IDLE' && !isEngaging,
-    canFire:
-      turretStatus === 'TARGETING' && !isEngaging && currentTarget !== null,
-    isFiring: turretStatus === 'FIRING',
-    currentTarget,
-  };
-};
-
-// Middleware for handling async platform updates
-export const initializePlatform = async () => {
-  const { actions } = usePlatformStore.getState();
-  try {
-    const response = await fetch('http://localhost:3333/api/platform/test');
-    const data = await response.json();
-    if (data.platform) {
-      actions.updatePlatform(data.platform);
-    }
-  } catch (error) {
-    console.error('Failed to initialize platform:', error);
-  }
-};

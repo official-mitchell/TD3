@@ -95,7 +95,7 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 **Phase 2 status:** 2.2 ✅ 2.3 ✅ 2.4 ✅ complete. 2.1 (engagement handler) pending. 2.5 acceptance criteria partially verifiable.
 
-### 2.1 Engagement handler in `socket-service.ts`
+### 2.1 Engagement handler in `socket-service.ts` (pending — not yet implemented)
 
 - [ ] 2.1.1. Inside the `socket.on('connection')` callback, register a listener for the `engagement:fire` event. The payload type is `EngagementFirePayload`.
 
@@ -165,47 +165,47 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 - [x] 3.2.7. **Critical pitfall:** Never iterate a `Map` directly in JSX. Always call `Array.from(state.drones.values())` before any `.filter()` or `.map()` call. This is the root cause of the known target-list rendering bug.
 
-### 3.3 `targetStore.ts`
+### 3.3 `targetStore.ts` ✅
 
-3.3.1. Create `apps/frontend/src/store/targetStore.ts`. State holds `selectedDroneId: string | null`, initialized to `null`.
+- [x] 3.3.1. Create `apps/frontend/src/store/targetStore.ts`. State holds `selectedDroneId: string | null`, initialized to `null`.
 
-3.3.2. Implement `setSelected(droneId: string | null)` — sets the selected drone directly.
+- [x] 3.3.2. Implement `setSelected(droneId: string | null)` — sets the selected drone directly.
 
-3.3.3. Implement `nextTarget(sortedIds: string[])` — advances the selection to the next entry in the sorted array, wrapping from last to first.
+- [x] 3.3.3. Implement `nextTarget(sortedIds: string[])` — advances the selection to the next entry in the sorted array, wrapping from last to first.
 
-3.3.4. Implement `prevTarget(sortedIds: string[])` — moves selection to the previous entry, wrapping from first to last.
+- [x] 3.3.4. Implement `prevTarget(sortedIds: string[])` — moves selection to the previous entry, wrapping from first to last.
 
-3.3.5. **This store must never be touched by telemetry update logic.** `selectedDroneId` is owned exclusively by user interaction and the `nextTarget`/`prevTarget` actions. WebSocket drone updates update `droneStore` only. This separation is what fixes the selection-persistence bug.
+- [x] 3.3.5. **This store must never be touched by telemetry update logic.** `selectedDroneId` is owned exclusively by user interaction and the `nextTarget`/`prevTarget` actions. WebSocket drone updates update `droneStore` only. This separation is what fixes the selection-persistence bug.
 
-### 3.4 `platformStore.ts`
+### 3.4 `platformStore.ts` ✅
 
-3.4.1. Create `apps/frontend/src/store/platformStore.ts`. State holds `platform: IWeaponPlatform | null`, initialized to `null`.
+- [x] 3.4.1. Create `apps/frontend/src/store/platformStore.ts`. State holds `platform: IWeaponPlatform | null`, initialized to `null`.
 
-3.4.2. Implement `updatePlatform(platform: IWeaponPlatform)` — replaces the platform state.
+- [x] 3.4.2. Implement `updatePlatform(platform: IWeaponPlatform)` — replaces the platform state.
 
-### 3.5 `connectionStore.ts`
+### 3.5 `connectionStore.ts` ✅
 
-3.5.1. Create `apps/frontend/src/store/connectionStore.ts`. State holds `status: ConnectionStatus` initialized to `Offline`, and `lastHeartbeat: number | null` initialized to `null`.
+- [x] 3.5.1. Create `apps/frontend/src/store/connectionStore.ts`. State holds `status: ConnectionStatus` initialized to `Offline`, and `lastHeartbeat: number | null` initialized to `null`.
 
-3.5.2. Implement `setStatus(status: ConnectionStatus)` — sets the connection status.
+- [x] 3.5.2. Implement `setStatus(status: ConnectionStatus)` — sets the connection status.
 
-3.5.3. Implement `recordHeartbeat()` — sets `lastHeartbeat` to `Date.now()` and sets `status` to `Connected`.
+- [x] 3.5.3. Implement `recordHeartbeat()` — sets `lastHeartbeat` to `Date.now()` and sets `status` to `Connected`.
 
-### 3.6 `engagementLogStore.ts`
+### 3.6 `engagementLogStore.ts` ✅
 
-3.6.1. Create `apps/frontend/src/store/engagementLogStore.ts`. State holds `log: IEngagementRecord[]` initialized to an empty array.
+- [x] 3.6.1. Create `apps/frontend/src/store/engagementLogStore.ts`. State holds `log: IEngagementRecord[]` initialized to an empty array.
 
-3.6.2. Implement `appendLog(record: IEngagementRecord)` — prepends the record to the front of the array and trims the array to a maximum of 200 entries.
+- [x] 3.6.2. Implement `appendLog(record: IEngagementRecord)` — prepends the record to the front of the array and trims the array to a maximum of 200 entries.
 
-3.6.3. Implement `clearLog()` — replaces the array with an empty array.
+- [x] 3.6.3. Implement `clearLog()` — replaces the array with an empty array.
 
 ### 3.7 Acceptance criteria
 
-3.7.1. All five store files compile with zero TypeScript errors when running `npx nx typecheck frontend`.
+- [x] 3.7.1. All five store files compile with zero TypeScript errors when running `npx nx typecheck frontend`.
 
-3.7.2. Calling `droneStore.updateDrone(testDrone)` followed by `droneStore.getSortedByDistance(lat, lng)` returns only drones with status `Confirmed` or `Engagement Ready`.
+- [ ] 3.7.2. Calling `droneStore.updateDrone(testDrone)` followed by `droneStore.getSortedByDistance(lat, lng)` returns only drones with status `Confirmed` or `Engagement Ready`.
 
-3.7.3. Calling `targetStore.setSelected('QUAD-001')` then triggering `droneStore.updateDrone(...)` with the same drone does not reset `targetStore.selectedDroneId`.
+- [ ] 3.7.3. Calling `targetStore.setSelected('QUAD-001')` then triggering `droneStore.updateDrone(...)` with the same drone does not reset `targetStore.selectedDroneId`.
 
 ---
 
@@ -214,47 +214,47 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 **Depends on:** Steps 1 and 3.
 **Output:** `apps/frontend/src/hooks/useSocket.ts` — a single React hook that establishes the Socket.IO connection, routes all incoming events to their respective Zustand store actions, and manages heartbeat lifecycle.
 
-### 4.1 Install dependencies
+### 4.1 Install dependencies ✅
 
-4.1.1. Install `socket.io-client` as a production dependency.
+- [x] 4.1.1. Install `socket.io-client` as a production dependency.
 
-### 4.2 Hook implementation
+### 4.2 Hook implementation ✅
 
-4.2.1. Create `apps/frontend/src/hooks/useSocket.ts`. The hook must use a `useRef` to hold the Socket.IO client instance so it is not re-created on re-renders.
+- [x] 4.2.1. Create `apps/frontend/src/hooks/useSocket.ts`. The hook must use a `useRef` to hold the Socket.IO client instance so it is not re-created on re-renders.
 
-4.2.2. Read the WebSocket server URL from `import.meta.env.VITE_SOCKET_URL`, with a fallback of `http://localhost:3000` for local development.
+- [x] 4.2.2. Read the WebSocket server URL from `import.meta.env.VITE_SOCKET_URL`, with a fallback of `http://localhost:3333` for local development.
 
-4.2.3. Instantiate the Socket.IO client inside `useEffect` with reconnection enabled, initial reconnection delay of 1000ms, maximum delay of 10,000ms, and unlimited reconnection attempts.
+- [x] 4.2.3. Instantiate the Socket.IO client inside `useEffect` with reconnection enabled, initial reconnection delay of 1000ms, maximum delay of 10,000ms, and unlimited reconnection attempts.
 
-4.2.4. On `connect`: call `connectionStore.setStatus('Connected')`. Start the heartbeat interval.
+- [x] 4.2.4. On `connect`: call `connectionStore.setStatus('Connected')`. Start the heartbeat interval.
 
-4.2.5. On `disconnect`: call `connectionStore.setStatus('Offline')`. Clear the heartbeat interval and watchdog timeout.
+- [x] 4.2.5. On `disconnect`: call `connectionStore.setStatus('Offline')`. Clear the heartbeat interval and watchdog timeout.
 
-4.2.6. On `connect_error`: call `connectionStore.setStatus('Degraded')`.
+- [x] 4.2.6. On `connect_error`: call `connectionStore.setStatus('Degraded')`.
 
-4.2.7. On `drone:update`: call `droneStore.updateDrone(payload)`. Also call `saveTelemetry(payload)` from the offline storage module (Step 14).
+- [x] 4.2.7. On `drone:update` (and `droneUpdate` for backend compat): call `droneStore.updateDrone(payload)`. Also call `saveTelemetry(payload)` from the offline storage module (Step 14) when implemented.
 
-4.2.8. On `platform:status`: call `platformStore.updatePlatform(payload)`.
+- [x] 4.2.8. On `platform:status`: call `platformStore.updatePlatform(payload)`.
 
-4.2.9. On `drone:destroyed`: call `droneStore.removeDrone(payload.droneId)`.
+- [x] 4.2.9. On `drone:destroyed`: call `droneStore.removeDrone(payload.droneId)`.
 
-4.2.10. On `drone:hit`: call `engagementLogStore.appendLog(...)` with outcome `Hit`. Populate `droneType` from the current `droneStore` entry for that `droneId` before removing it, if available.
+- [x] 4.2.10. On `drone:hit`: call `engagementLogStore.appendLog(...)` with outcome `Hit`. Populate `droneType` from the current `droneStore` entry for that `droneId` before removing it, if available.
 
-4.2.11. On `drone:missed`: call `engagementLogStore.appendLog(...)` with outcome `Missed`.
+- [x] 4.2.11. On `drone:missed`: call `engagementLogStore.appendLog(...)` with outcome `Missed`.
 
-4.2.12. On `heartbeat:pong`: clear the watchdog timeout and call `connectionStore.recordHeartbeat()`.
+- [x] 4.2.12. On `heartbeat:pong`: clear the watchdog timeout and call `connectionStore.recordHeartbeat()`.
 
-### 4.3 Heartbeat logic
+### 4.3 Heartbeat logic ✅
 
-4.3.1. The heartbeat interval fires every 5,000ms. On each tick, emit `heartbeat:ping` and set a watchdog timeout of 12,000ms that calls `connectionStore.setStatus('Degraded')` if no `heartbeat:pong` arrives before it fires.
+- [x] 4.3.1. The heartbeat interval fires every 5,000ms. On each tick, emit `heartbeat:ping` and set a watchdog timeout of 12,000ms that calls `connectionStore.setStatus('Degraded')` if no `heartbeat:pong` arrives before it fires.
 
-4.3.2. On `heartbeat:pong`, clear the active watchdog timeout to prevent a false `Degraded` transition.
+- [x] 4.3.2. On `heartbeat:pong`, clear the active watchdog timeout to prevent a false `Degraded` transition.
 
-4.3.3. The interval and watchdog timer must both be cleared in the `useEffect` cleanup function so there are no memory leaks when the component unmounts.
+- [x] 4.3.3. The interval and watchdog timer must both be cleared in the `useEffect` cleanup function so there are no memory leaks when the component unmounts.
 
-### 4.4 Mount the hook
+### 4.4 Mount the hook ✅
 
-4.4.1. Call `useSocket()` at the top level of `apps/frontend/src/App.tsx` so the connection is established once on app load. The hook return value is the socket ref, which can be passed down or accessed via a context if needed by child components (such as `BottomBar`).
+- [x] 4.4.1. Call `useSocket()` at the top level of `apps/frontend/src/App.tsx` so the connection is established once on app load. The hook return value is the socket ref, which can be passed down or accessed via a context if needed by child components (such as `BottomBar`).
 
 ### 4.5 Acceptance criteria
 
@@ -1173,3 +1173,7 @@ td3/
 | 2026-03-18 | **Phase 2.4 Heartbeat handler:** Added `heartbeat:ping` listener in socket-service; on receipt emits `heartbeat:pong` to same socket. Removed nested disconnect listener bug from requestDroneUpdate. Removed commented CORS block. |
 | 2026-03-18 | **Phase 2.5 Acceptance criteria review:** Reformatted as table with dependency and status columns. 2.5.1 and 2.5.6 verifiable now; 2.5.2–2.5.5 blocked on Step 2.1 (engagement handler). |
 | 2026-03-18 | **Phase 2 + Phase 3.1–3.2:** Added Phase 2 status line. Phase 3.1 zustand/immer confirmed in package.json. Phase 3.2 droneStore: rewritten with Immer, Map<string,IDrone>, updateDrone, removeDrone, clearDrones, getSortedByDistance (uses calculateDistance, filters Confirmed/Engagement Ready). Created targetStore for selection. Updated useSocket (updateDrone), useDrones (targetStore, getSortedByDistance). |
+| 2026-03-18 | **Phase 3.3–3.5 store cleanup:** targetStore: confirmed spec compliance. platformStore: simplified to platform | null + updatePlatform only; removed turretStatus, currentTarget, killLog, addKill, selector hooks. connectionStore: created with status, lastHeartbeat, setStatus, recordHeartbeat. Refactored usePlatform to use targetStore for selection, local state for turretStatus. |
+| 2026-03-18 | **Phase 3.6–3.7:** Created engagementLogStore.ts with log, appendLog, clearLog (max 200). Fixed TypeScript: LogEntries (Copter→Circle), LogPanel (export types, fix mock), tsconfig.app rootDir+include for shared-types. All stores compile with zero errors. |
+| 2026-03-18 | **Phase 2.1 + 4.1–4.4:** Added "(pending — not yet implemented)" to 2.1 header. socket.io-client already in deps. useSocket: useRef, VITE_SOCKET_URL fallback 3333, reconnection config, connectionStore/connectionStore/platformStore/engagementLogStore routing, droneUpdate+drone:update, platform:status, drone:destroyed, drone:hit, drone:missed, heartbeat:ping/pong (5s interval, 12s watchdog). Mounted useSocket in App.tsx. Backend: emit platform:status on connect. |
+| 2026-03-18 | **Phase 4.5 Acceptance:** Added temporary debug display in Navbar showing `connectionStore.status` (Connected/Offline/Degraded) and `droneStore.drones.size`. Enables verification of 4.5.1–4.5.4 without React DevTools. Manual verification: start backend+frontend → status=Connected, drones populate; stop backend → status→Offline within ~15s; restart backend → status→Connected without reload. |

@@ -1,6 +1,6 @@
 /**
- * Target selection store. selectedDroneId owned by user interaction only.
- * Per Implementation Plan 3.3. Never touched by telemetry/WebSocket updates.
+ * Target selection store. Per Implementation Plan 3.3.
+ * selectedDroneId owned exclusively by user interaction. Never touched by telemetry/WebSocket.
  */
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';

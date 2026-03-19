@@ -2,10 +2,13 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../dist/out-tsc",
-    "types": ["node"],
-    "lib": ["DOM", "DOM.Iterable", "ESNext"]
+    "rootDir": "..",
+    "types": ["node", "vite/client"],
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "bundler"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "../libs/shared-types/src/index.ts"],
   "exclude": [
     "jest.config.ts",
     "**/*.spec.ts",

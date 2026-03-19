@@ -1,11 +1,35 @@
+/**
+ * Navbar with TD3 logo, action buttons, and connection/drone debug display (4.5 acceptance).
+ */
 import React from 'react';
 import { TD3Logo } from '../ui/TD3Logo';
+import { useConnectionStore } from '../../store/connectionStore';
+import { useDroneStore } from '../../store/droneStore';
 
 export const Navbar: React.FC = () => {
+  const status = useConnectionStore((s) => s.status);
+  const droneCount = useDroneStore((s) => s.drones.size);
+
   return (
     <nav className="flex justify-between items-center px-6 py-4 bg-slate-800/50">
       <TD3Logo />
-      <div className="flex gap-3">
+      <div className="flex items-center gap-4">
+        {/* 4.5 acceptance: temporary debug display for connectionStore.status and droneStore.drones */}
+        <div className="flex items-center gap-4 text-xs font-mono">
+          <span
+            className={`px-2 py-1 rounded ${
+              status === 'Connected'
+                ? 'bg-green-600/80 text-white'
+                : status === 'Offline'
+                  ? 'bg-red-600/80 text-white'
+                  : 'bg-amber-600/80 text-white'
+            }`}
+          >
+            {status}
+          </span>
+          <span className="text-slate-400">Drones: {droneCount}</span>
+        </div>
+        <div className="flex gap-3">
         <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">
           UPDATE PLATFORM
         </button>

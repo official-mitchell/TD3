@@ -1,5 +1,10 @@
 import React from 'react';
-import { EngagementLogCard, UpdateLogCard } from './LogEntries';
+import {
+  EngagementLogCard,
+  EngagementLogEntry,
+  UpdateLogCard,
+  UpdateLogEntry,
+} from './LogEntries';
 
 // interface LogEntry {
 //   timestamp: string;
@@ -51,13 +56,11 @@ export const LogPanel: React.FC = () => {
       bearing: 71.7,
       direction: 'E',
       altitude: 412.4,
-      speed: 132.7,
       position: {
         lat: 37.771735,
         lng: -122.428407,
       },
       threatLevel: 4,
-      inRange: true,
     },
   ];
 
@@ -74,6 +77,9 @@ export const LogPanel: React.FC = () => {
         lat: 37.771735,
         lng: -122.428407,
       },
+      altitude: 412.4,
+      speed: 132.7,
+      inRange: true,
     },
   ];
 
