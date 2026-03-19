@@ -1,5 +1,6 @@
 /**
  * Header bar. Left: TD3 logo + title. Right: Create Targets, hamburger menu (settings), drawer toggles (mobile).
+ * Settings menu: Change location, Refill ammo, weapon/drone size, sound volume.
  */
 import React, { useState } from 'react';
 import IconButton from '@mui/material/IconButton';
@@ -33,8 +34,10 @@ export const Header: React.FC<HeaderProps> = ({
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const weaponSize = useUIStore((s) => s.weaponSize);
   const droneSize = useUIStore((s) => s.droneSize);
+  const soundVolume = useUIStore((s) => s.soundVolume);
   const setWeaponSize = useUIStore((s) => s.setWeaponSize);
   const setDroneSize = useUIStore((s) => s.setDroneSize);
+  const setSoundVolume = useUIStore((s) => s.setSoundVolume);
 
   const handleMenuClose = () => setMenuAnchor(null);
 
@@ -48,6 +51,16 @@ export const Header: React.FC<HeaderProps> = ({
       if (!res.ok) throw new Error('Failed to update location');
     } catch (err) {
       console.error('Update location failed:', err);
+    }
+  };
+
+  const handleRefillAmmo = async () => {
+    handleMenuClose();
+    try {
+      const res = await fetch(`${API_BASE}/api/platform/refill`, { method: 'PUT' });
+      if (!res.ok) throw new Error('Failed to refill ammo');
+    } catch (err) {
+      console.error('Refill ammo failed:', err);
     }
   };
 
@@ -147,6 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             Change location…
           </MenuItem>
+          <MenuItem onClick={handleRefillAmmo}>Refill ammo</MenuItem>
           <div className="px-4 py-2 border-t border-[#1A3A5C]">
             <div className="text-xs text-[#7B9BB5] mb-1">Weapon system size</div>
             <Slider
@@ -166,6 +180,18 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(_, v) => setDroneSize(v as number)}
               min={0.5}
               max={2}
+              step={0.1}
+              size="small"
+              sx={{ color: '#1E90FF' }}
+            />
+          </div>
+          <div className="px-4 py-2 border-t border-[#1A3A5C]">
+            <div className="text-xs text-[#7B9BB5] mb-1">Sound volume</div>
+            <Slider
+              value={soundVolume}
+              onChange={(_, v) => setSoundVolume(v as number)}
+              min={0}
+              max={1}
               step={0.1}
               size="small"
               sx={{ color: '#1E90FF' }}

@@ -7,6 +7,7 @@ import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { useTargetStore } from '../../store/targetStore';
 import { useUIStore } from '../../store/uiStore';
+import { playSwivelSound } from '../../lib/sounds';
 import type { IDrone } from '@td3/shared-types';
 import { PULSE_RING_HTML } from './TargetLockRing';
 
@@ -24,6 +25,7 @@ export const DroneMarker: React.FC<{ drone: IDrone; isSelected: boolean }> = ({
   drone,
   isSelected,
 }) => {
+  const selectedDroneId = useTargetStore((s) => s.selectedDroneId);
   const setSelected = useTargetStore((s) => s.setSelected);
   const droneSize = useUIStore((s) => s.droneSize);
   const size = Math.round(BASE_SIZE * droneSize);
@@ -58,7 +60,10 @@ export const DroneMarker: React.FC<{ drone: IDrone; isSelected: boolean }> = ({
       position={pos}
       icon={icon}
       eventHandlers={{
-        click: () => setSelected(drone.droneId),
+        click: () => {
+          if (selectedDroneId !== drone.droneId) playSwivelSound();
+          setSelected(drone.droneId);
+        },
       }}
     />
   );

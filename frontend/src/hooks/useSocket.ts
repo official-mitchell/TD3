@@ -11,6 +11,7 @@ import { useConnectionStore } from '../store/connectionStore';
 import { useEngagementLogStore } from '../store/engagementLogStore';
 import type { IDrone, IWeaponPlatform, IEngagementRecord } from '@td3/shared-types';
 import { setSocketRef } from '../lib/socketRef';
+import { playHitSound } from '../lib/sounds';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3333';
 
@@ -94,6 +95,7 @@ export const useSocket = () => {
     });
 
     socket.on('drone:destroyed', (payload: { droneId: string }) => {
+      playHitSound();
       droneStore.removeDrone(payload.droneId);
       const platform = platformStore.platform;
       const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
@@ -105,6 +107,7 @@ export const useSocket = () => {
     });
 
     socket.on('drone:hit', (payload: { droneId: string; timestamp?: string }) => {
+      playHitSound();
       const drone = droneStore.drones.get(payload.droneId);
       const record: IEngagementRecord = {
         droneId: payload.droneId,

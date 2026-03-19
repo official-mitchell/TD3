@@ -48,19 +48,11 @@ describe('BottomBar', () => {
     vi.useRealTimers();
   });
 
-  it('10.1.1: renders PREV, target label, NEXT, FIRE in row', () => {
+  it('10.1.1: renders PREV, target label, NEXT (FIRE moved to map)', () => {
     render(<BottomBar />);
     expect(screen.getByText('← PREV')).toBeTruthy();
     expect(screen.getByText('NEXT →')).toBeTruthy();
-    expect(screen.getAllByText('NO TARGET').length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('10.2.3: FIRE shows NO TARGET and is disabled when no Engagement Ready drone', () => {
-    render(<BottomBar />);
-    const buttons = screen.getAllByRole('button');
-    const fireBtn = buttons.find((b) => b.textContent === 'NO TARGET');
-    expect(fireBtn).toBeTruthy();
-    expect((fireBtn as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('NO TARGET')).toBeTruthy();
   });
 
   it('10.1.2: shows engagement log feed', () => {
@@ -122,50 +114,6 @@ describe('BottomBar', () => {
   });
 
   describe('10.6 Acceptance criteria', () => {
-    it('10.6.1: FIRE disabled and labeled NO TARGET with no Engagement Ready drone', () => {
-      usePlatformStore.setState({ platform: PLATFORM });
-      useDroneStore.setState({
-        drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Detected' })]]),
-      });
-      render(<BottomBar />);
-      const fireBtn = screen.getAllByRole('button').find((b) => b.textContent === 'NO TARGET');
-      expect(fireBtn).toBeTruthy();
-      expect((fireBtn as HTMLButtonElement).disabled).toBe(true);
-    });
-
-    it('10.6.2: FIRE activates when drone is Engagement Ready', () => {
-      usePlatformStore.setState({ platform: PLATFORM });
-      useDroneStore.setState({
-        drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready' })]]),
-      });
-      useTargetStore.setState({ selectedDroneId: 'D1' });
-      render(<BottomBar />);
-      const fireBtn = screen.getByRole('button', { name: /FIRE \(300\)/ });
-      expect(fireBtn).toBeTruthy();
-      expect((fireBtn as HTMLButtonElement).disabled).toBe(false);
-      expect(fireBtn.className).toContain('fire-pulse');
-    });
-
-    it('10.6.3: pressing FIRE emits engagement:fire and shows ENGAGING... for ~350ms', () => {
-      vi.useFakeTimers();
-      usePlatformStore.setState({ platform: PLATFORM });
-      useDroneStore.setState({
-        drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready' })]]),
-      });
-      useTargetStore.setState({ selectedDroneId: 'D1' });
-      render(<BottomBar />);
-      const fireBtn = screen.getByRole('button', { name: /FIRE/ });
-      fireEvent.click(fireBtn);
-
-      expect(mockEmit).toHaveBeenCalledWith('engagement:fire', expect.objectContaining({ droneId: 'D1' }));
-      expect(screen.getByText('ENGAGING…')).toBeTruthy();
-
-      act(() => {
-        vi.advanceTimersByTime(350);
-      });
-      expect(screen.getByText(/FIRE \(300\)/)).toBeTruthy();
-    });
-
     it('10.6.4: new log entry appears when drone:hit or drone:missed received', () => {
       render(<BottomBar />);
       expect(screen.getByText(/No engagements yet/)).toBeTruthy();

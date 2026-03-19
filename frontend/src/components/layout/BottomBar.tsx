@@ -1,14 +1,14 @@
 /**
  * Bottom bar. Per Implementation Plan 10.1–10.5.
- * PREV/NEXT target nav, FIRE button with states, engagement log feed.
+ * PREV/NEXT target nav, engagement log feed. FIRE button moved to map (MapFireButton).
  */
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { format } from 'date-fns';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { useEngagementLogStore } from '../../store/engagementLogStore';
-import { getSocket } from '../../lib/socketRef';
+import { playSwivelSound } from '../../lib/sounds';
 
 const LOG_DISPLAY_COUNT = 10;
 
@@ -19,7 +19,6 @@ export const BottomBar: React.FC = () => {
   const nextTarget = useTargetStore((s) => s.nextTarget);
   const prevTarget = useTargetStore((s) => s.prevTarget);
   const log = useEngagementLogStore((s) => s.log);
-  const [firing, setFiring] = useState(false);
 
   const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
   const sortedIds = useMemo(
@@ -28,23 +27,7 @@ export const BottomBar: React.FC = () => {
   );
   const selectedDrone = selectedDroneId ? drones.get(selectedDroneId) : null;
 
-  const canFire =
-    selectedDrone?.status === 'Engagement Ready' &&
-    !firing &&
-    (platform?.isActive ?? false) === true;
-
-  const ammoCount = platform?.ammoCount ?? 0;
   const logEntries = useMemo(() => log.slice(0, LOG_DISPLAY_COUNT), [log]);
-
-  const handleFire = () => {
-    if (!canFire || !selectedDroneId) return;
-    const socket = getSocket();
-    if (!socket) return;
-    setFiring(true);
-    socket.emit('engagement:fire', { droneId: selectedDroneId, timestamp: new Date().toISOString() });
-    setTimeout(() => setFiring(false), 350);
-  };
-
   const navDisabled = sortedIds.length < 2;
 
   return (
@@ -52,7 +35,10 @@ export const BottomBar: React.FC = () => {
       <div className="flex items-center justify-between px-4 py-2 gap-4">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <button
-            onClick={() => prevTarget(sortedIds)}
+            onClick={() => {
+              playSwivelSound();
+              prevTarget(sortedIds);
+            }}
             disabled={navDisabled}
             className="px-3 py-1 text-sm bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded"
           >
@@ -62,25 +48,16 @@ export const BottomBar: React.FC = () => {
             {selectedDrone ? `${selectedDrone.droneId} (${selectedDrone.status})` : 'NO TARGET'}
           </span>
           <button
-            onClick={() => nextTarget(sortedIds)}
+            onClick={() => {
+              playSwivelSound();
+              nextTarget(sortedIds);
+            }}
             disabled={navDisabled}
             className="px-3 py-1 text-sm bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded"
           >
             NEXT →
           </button>
         </div>
-        <button
-          onClick={handleFire}
-          disabled={!canFire || firing}
-          className={`
-            px-4 py-2 rounded font-medium text-sm min-w-[100px]
-            ${firing ? 'bg-amber-600 text-white cursor-not-allowed' : ''}
-            ${canFire && !firing ? 'fire-pulse bg-red-600 hover:bg-red-700 text-white' : ''}
-            ${!canFire && !firing ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : ''}
-          `}
-        >
-          {firing ? 'ENGAGING…' : canFire ? `FIRE (${ammoCount})` : 'NO TARGET'}
-        </button>
       </div>
       <div className="h-16 px-4 pb-2 overflow-x-auto overflow-y-hidden">
         <div className="flex gap-3 items-center h-full min-w-0 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">

@@ -8,6 +8,7 @@ import { usePlatformStore } from '../../store/platformStore';
 import { useConnectionStore } from '../../store/connectionStore';
 import { useDroneStore } from '../../store/droneStore';
 import { useEngagementLogStore } from '../../store/engagementLogStore';
+import { MINIGUN_STATS } from '../../utils/constants';
 
 const StatusCard: React.FC<{
   title: string;
@@ -76,6 +77,12 @@ export const StatusCards: React.FC = () => {
             >
               {turretBadge.text}
             </span>
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-700 text-xs text-slate-500 space-y-0.5">
+            <div>ROF: {MINIGUN_STATS.RATE_OF_FIRE_SHOTS_PER_MIN}/min</div>
+            <div>Muzzle: {MINIGUN_STATS.MUZZLE_VELOCITY_M_S} m/s</div>
+            <div>Effective: {MINIGUN_STATS.EFFECTIVE_RANGE_M} m</div>
+            <div>Max range: {MINIGUN_STATS.MAX_RANGE_M} m</div>
           </div>
         </div>
       </StatusCard>

@@ -692,22 +692,28 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 - [x] make the telemetry overlay background 30% more transparent. 
 - [x] cache recent user settings for size. Increase default size of the vehicle by 30% and drones by 15%
 - [X] remove and consolidate target details to the interface itself.
-- [ ] allow me to press cmd + enter (on Mac) to fire the turret; different on PC — let's detect the user's device settings
-- [ ] show the keyboard shortcut, small underneath the fire button, based on the user's device
-- [ ] center the fire button inside of the map overlay in the center along the bottom center of the map with some bottom margin, add a glowing animation to the background gradient red color, add a grow/shrinking button size animation
-- [ ] add an animation to whenever the fire button is pressed the button itself grows out super quickly and shrinks really quickly as if it's shooting and recoiling, add some wobble as it grows and shrinks
-- [ ] enable sounds in settings... slider for sound volume... make frontend/src/assets/diesel-idle.mp3 always present
-- [ ] enable first 1.5 seconds of frontend/src/assets/mechanical-clamp.mp3 for swivel sound (have it fade out)
-- [ ] enable frontend/src/assets/a-10-warthog-brrrt.mp3 when firing
-- [ ] slow down swivels so it takes a little bit of time to reposition
-- [ ] show distance between the turret and the drone as a stat on the line between vehicle and the drone
-- [ ] allow me to click off the drone to deselect that target.
+- [x] allow me to press cmd + enter (on Mac) to fire the turret; different on PC — let's detect the user's device settings
+- [x] show the keyboard shortcut, small underneath the fire button, based on the user's device
+- [x] center the fire button inside of the map overlay in the center along the bottom center of the map with some bottom margin, add a glowing animation to the background gradient red color, add a grow/shrinking button size animation
+- [x] add an animation to whenever the fire button is pressed the button itself grows out super quickly and shrinks really quickly as if it's shooting and recoiling, add some wobble as it grows and shrinks
+- [x] enable sounds in settings... slider for sound volume... make frontend/src/assets/diesel-idle.mp3 always present
+- [x] enable first 1.5 seconds of frontend/src/assets/mechanical-clamp.mp3 for swivel sound (have it fade out)
+- [x] enable frontend/src/assets/a-10-warthog-brrrt.mp3 when firing
+- [x] create an ammo count in the top right, use a casino rolling typography animation (make default ammo count 2000 rounds). Combine this by using the frontend/src/assets/TD3 minigun mock.png, so the ammo depletes. Show the text grow and shrink and wobble similarly to the fire button WHILE also the casino rolling typography animation shows the ammo count depleting
+- [x] ensure that ammo actually depletes... and doesn't just reset
+- [x] remove background container of turret and ammo counter — remove ambient grow/shrink, should only animate during firing and ammo depletion
+- [x] represent real life stats of the machine gun: Rate of fire, 200 shots per minute. Muzzle velocity, 805 m/s. Effective firing range, 300 m. Maximum firing range, 4,000 m.
+- [x] slow down swivels so it takes a little bit of time to reposition
+- [x] show distance between the turret and the drone as a stat on the line between vehicle and the drone
+- [x] allow me to click off the drone to deselect that target.
 - [ ] tether sounds to animation
-- [ ] swivel turret by 15 degrees clockwise
-- [ ] create tracer rounds that match the amount count when they hit the drones
+- [ ] rotate turret image by 15 degrees clockwise so turret barrel aligns with heading
+- [ ] create tracer rounds that match the amount count when they hit the drones ensure that they fade out after they fire; start as white-red bullets to imitate fire then fade them out
+- [ ] animate the turret a subtle opposite heading x/y translation to mimic recoil, should reset after firing
 - [ ] create animation for landing hits and missed shots (show the rounds missing the target) and create little X's when they miss (assume they land behind the drone in some way)
 - [ ] create a range accuracy gradient cone away from the vehicle
 - [ ] generate FRIENDLIES on the screen — representing radar equipment, personnel, command posts, HQs, vehicles, aircraft, and ships. Generate friendlies inside, outside, and far outside the turret. Persist the allies in a database. When I click on them allow me to see their status.
+- [ ] remove the engagement log from the bottom bar, so the bottom bar's height shrinks. Ensure the Engagement Log in the right side bar is organized from most recent first in descending order
 
 
 ---
@@ -1238,3 +1244,9 @@ td3/
 | 2026-03-19 | **Telemetry overlay v9:** SpeedGauge: 270° arc like car speedometer (0 bottom-left, 200 bottom-right, clockwise). ElevationChart: radial ticks use d3 coords (x=sin, y=-cos) so they stay in upper-right quadrant (positive X, positive Y), not below X axis. |
 | 2026-03-19 | **Frontend Fix — cache size settings + defaults:** uiStore: added zustand persist middleware for weaponSize/droneSize to localStorage (key `td3-ui-settings`). Default weaponSize 1.3 (+30% vehicle), droneSize 1.15 (+15% drones). User preferences persist across sessions. |
 | 2026-03-19 | **Frontend Fix — consolidate target details:** Removed DroneDetailPanel. Target details (ID, type, status, distance, bearing, IN RANGE) now in TelemetryOverlay header on map. TargetPanel: PriorityTargetList only; slim "Select a target from the list above" footer when targets exist but none selected. Deleted DroneDetailPanel.tsx. Updated TargetPanel.spec and TelemetryOverlay.spec. |
+| 2026-03-19 | **Frontend Fixes 695–698:** Cmd+Enter (Mac) / Ctrl+Enter (PC) to fire; shortcut label (⌘↵ / Ctrl+↵) under button. MapFireButton: centered at bottom of map (bottom-6), glowing (fire-pulse), grow/shrink idle (fire-breathe), recoil on press (fire-recoil). FIRE moved from BottomBar to map. BottomBar: PREV/NEXT + log only. |
+| 2026-03-19 | **Frontend Fixes 699–701:** Sound volume slider in Header settings (uiStore, persisted). DieselAmbient: diesel-idle loops when platform active. mechanical-clamp: first 1.5s with 500ms fade on swivel (PlatformMarker heading change). a-10-warthog on fire (MapFireButton). lib/sounds.ts, DieselAmbient.tsx. |
+| 2026-03-19 | **Fire button + Ammo overlay:** Fire button fixed at bottom-6 (no shift when explanation shows). Explanation absolute bottom-2. AmmoOverlay: top right, minigun mock image, depletion gradient (ammo/2000), casino rolling typography on change, fire-breathe animation. |
+| 2026-03-19 | **Frontend Fixes 703–708:** (703) Ammo depletes correctly; default ammo 2000 for new platform. (704) AmmoOverlay: removed container, fire-breathe only during firing/depletion. (705) MINIGUN_STATS in constants; StatusCards Weapon System shows ROF 200/min, muzzle 805 m/s, effective 300 m, max 4,000 m. (706) PlatformMarker turret: 0.6s ease-out transition. (707) LineOfFire: permanent Tooltip with distance (m). (708) MapClickToDeselect: click map (not drone) deselects target. |
+| 2026-03-19 | **Fire button + LineOfFire fixes:** MapFireButton: uses firingDroneIdRef so ENGAGING resets on drone:destroyed even when useSocket runs first and changes selectedDroneId. LineOfFire: textRotation exported and normalized (bearing % 360), rotation kept in [0, 180) so text never flips upside down; key={targetDrone.droneId} on Polyline so tooltip position resets when target changes. LineOfFire.spec: added textRotation test (rotation in [0, 180)); mock includes Tooltip. |
+| 2026-03-19 | **LineOfFire text parallel to line:** Previous formula gave perpendicular text (bearing>=180 → bearing-180 produced horizontal text on vertical line). Fixed: rotation=(bearing+90)%360 for parallel (CSS rotate(0)=horizontal; line at bearing B needs B+90 for parallel). Flip when r in (90,270) to avoid upside down. Text now runs along the line; target at (-x,+y) no longer shows upside-down text. |

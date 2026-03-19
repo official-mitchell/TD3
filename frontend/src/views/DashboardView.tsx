@@ -12,6 +12,7 @@ import { BottomBar } from '@components/layout/BottomBar';
 import { TargetPanel } from '@components/panels/TargetPanel';
 import { StatusPanel } from '@components/panels/StatusPanel';
 import { MapContainer } from '@components/map/MapContainer';
+import { DieselAmbient } from '@components/audio/DieselAmbient';
 
 const SIDEBAR_BORDER = '1px solid #1A3A5C';
 
@@ -34,6 +35,7 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#0A0E1A] text-[#E8F4FD]">
+      <DieselAmbient />
       {/* 6.1.2 Header row — 11.1–11.3 Header with connection badge and drawer toggles */}
       <div className="flex items-center flex-shrink-0">
         <Header

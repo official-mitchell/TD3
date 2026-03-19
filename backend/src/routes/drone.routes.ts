@@ -1,5 +1,6 @@
 /**
  * Drone and platform REST routes. Phase 2.3: cleaned routes, standardized error handlers.
+ * PUT /platform/refill: refills ammo to 2000.
  */
 import { Router, Request, Response } from 'express';
 import Drone from '../models/drone.model';
@@ -151,7 +152,7 @@ router.post('/platform/init', async (req: Request, res: Response) => {
       position: { lat: 25.905310475056915, lng: 51.543824178558054 }, // Ras Laffan, Qatar
       heading: 0,
       isActive: true,
-      ammoCount: 300,
+      ammoCount: 2000,
       killCount: 0,
     });
     await platform.save();
@@ -180,6 +181,22 @@ router.put('/platform/position', async (req: Request, res: Response) => {
     return res.json(platform);
   } catch (error) {
     return sendError(res, 500, 'Error updating platform position', error);
+  }
+});
+
+router.put('/platform/refill', async (req: Request, res: Response) => {
+  try {
+    const socketService = req.app.get('socketService');
+    if (!socketService?.refillAmmo) {
+      return sendError(res, 500, 'Socket service or refill not available');
+    }
+    const ok = await socketService.refillAmmo();
+    if (!ok) {
+      return sendError(res, 404, 'No active weapon platform found');
+    }
+    return res.json({ message: 'Ammo refilled', ammoCount: 2000 });
+  } catch (error) {
+    return sendError(res, 500, 'Error refilling ammo', error);
   }
 });
 

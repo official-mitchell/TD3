@@ -1,6 +1,9 @@
 /**
  * Socket.IO service — telemetry simulation and engagement handling.
  * Phase 2.4: heartbeat:ping → heartbeat:pong. Added engagement:fire handler (Step 2.1).
+ * createTestDrones: add-only (no delete of enemies), delete friendlies only, 6 enemy drones per batch.
+ * refillAmmo: sets ammo to 2000 and broadcasts platform:status.
+ * handleEngagementFire: decrement ammo by 3 on BOTH hit and miss (fixes frontend reset bug).
  */
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
@@ -38,6 +41,11 @@ export class SocketService {
     threatChangeProb: 0.1,
   };
   private platform: IWeaponPlatform | null = null;
+  private firingInterval: NodeJS.Timeout | null = null;
+  private activeFiringDroneId: string | null = null;
+
+  /** 200 shots/min = 1 round every 300ms */
+  private static readonly ROUND_INTERVAL_MS = 300;
 
   constructor(server: HttpServer) {
     this.io = new SocketServer(server, {
@@ -134,7 +142,7 @@ export class SocketService {
           position: SocketService.RAS_LAFFAN,
           heading: 0,
           isActive: true,
-          ammoCount: 300,
+          ammoCount: 2000,
           killCount: 0,
         });
       } else {
@@ -154,7 +162,7 @@ export class SocketService {
         position: platform.position as { lat: number; lng: number },
         heading: platform.heading,
         isActive: platform.isActive,
-        ammoCount: platform.ammoCount ?? 300,
+        ammoCount: platform.ammoCount ?? 2000,
         killCount: platform.killCount ?? 0,
       };
       console.log('Weapon platform initialized:', this.platform);
@@ -174,6 +182,26 @@ export class SocketService {
     if (!this.platform) return;
     this.platform = { ...this.platform, position };
     this.io.emit('platform:status', this.platform);
+  }
+
+  /** Public: refill ammo to max (2000) and broadcast to all clients */
+  async refillAmmo(): Promise<boolean> {
+    try {
+      const platformDoc = await WeaponPlatform.findOne({ isActive: true });
+      if (!platformDoc) return false;
+      const MAX_AMMO = 2000;
+      platformDoc.ammoCount = MAX_AMMO;
+      await platformDoc.save();
+      this.platform = {
+        ...this.platform!,
+        ammoCount: MAX_AMMO,
+      };
+      this.io.emit('platform:status', this.platform);
+      return true;
+    } catch (err) {
+      console.error('Refill ammo failed:', err);
+      return false;
+    }
   }
 
   private async updateDrone(droneId: string) {
@@ -284,67 +312,95 @@ export class SocketService {
     return R * c;
   }
 
+  private stopFiring() {
+    if (this.firingInterval) {
+      clearInterval(this.firingInterval);
+      this.firingInterval = null;
+    }
+    this.activeFiringDroneId = null;
+  }
+
   private async handleEngagementFire(droneId: string, timestamp: string) {
     try {
       const drone = await Drone.findOne({ droneId });
       if (!drone || drone.status !== 'Engagement Ready' || !this.platform) {
         return;
       }
-      const distanceM = this.calculateDistance(drone.position, this.platform.position);
-      const rangeFactor = Math.max(0, 1 - distanceM / 2000);
-      const speedPenalty = drone.speed / 500;
-      const hitProbability = Math.min(1, Math.max(0,
-        0.85 * rangeFactor * (1 - speedPenalty * 0.3)
-      ));
-      const roll = Math.random();
-      const isHit = roll <= hitProbability;
+      this.stopFiring();
+      this.activeFiringDroneId = droneId;
 
-      await TelemetryLog.create({
-        timestamp,
-        droneId,
-        position: drone.position,
-        status: drone.status,
-        engagementOutcome: isHit ? 'Destroyed' : 'Missed',
-      });
+      const fireOneRound = async (): Promise<void> => {
+        if (this.activeFiringDroneId !== droneId) return;
 
-      if (isHit) {
-        drone.status = 'Hit';
-        await drone.save();
-        this.io.emit('drone:hit', { droneId, timestamp });
-        await new Promise((r) => setTimeout(r, 300));
-        drone.status = 'Destroyed';
-        await drone.save();
-        this.io.emit('drone:destroyed', { droneId });
-        const platformDoc = await WeaponPlatform.findOne({ isActive: true });
-        if (platformDoc) {
-          platformDoc.ammoCount = Math.max(0, platformDoc.ammoCount - 3);
-          platformDoc.killCount += 1;
-          await platformDoc.save();
-          this.platform = {
-            position: platformDoc.position,
-            heading: platformDoc.heading,
-            isActive: platformDoc.isActive,
-            ammoCount: platformDoc.ammoCount,
-            killCount: platformDoc.killCount,
-          };
-          this.io.emit('platform:status', this.platform);
+        const freshDrone = await Drone.findOne({ droneId });
+        if (!freshDrone || freshDrone.status !== 'Engagement Ready') {
+          this.stopFiring();
+          return;
         }
-      } else {
-        this.io.emit('drone:missed', { droneId, outcome: 'Missed', timestamp });
+
         const platformDoc = await WeaponPlatform.findOne({ isActive: true });
-        if (platformDoc && this.platform) {
-          this.platform = {
-            position: platformDoc.position,
-            heading: platformDoc.heading,
-            isActive: platformDoc.isActive,
-            ammoCount: platformDoc.ammoCount,
-            killCount: platformDoc.killCount,
-          };
-          this.io.emit('platform:status', this.platform);
+        if (!platformDoc || platformDoc.ammoCount <= 0) {
+          this.stopFiring();
+          return;
         }
-      }
+
+        platformDoc.ammoCount = Math.max(0, platformDoc.ammoCount - 1);
+        await platformDoc.save();
+        this.platform = {
+          position: platformDoc.position,
+          heading: platformDoc.heading,
+          isActive: platformDoc.isActive,
+          ammoCount: platformDoc.ammoCount,
+          killCount: platformDoc.killCount,
+        };
+        this.io.emit('platform:status', this.platform);
+
+        const distanceM = this.calculateDistance(freshDrone.position, this.platform.position);
+        const rangeFactor = Math.max(0, 1 - distanceM / 2000);
+        const speedPenalty = freshDrone.speed / 500;
+        const hitProbability = Math.min(1, Math.max(0,
+          0.85 * rangeFactor * (1 - speedPenalty * 0.3)
+        ));
+        const roll = Math.random();
+        const isHit = roll <= hitProbability;
+
+        await TelemetryLog.create({
+          timestamp: new Date().toISOString(),
+          droneId,
+          position: freshDrone.position,
+          status: freshDrone.status,
+          engagementOutcome: isHit ? 'Destroyed' : 'Missed',
+        });
+
+        if (isHit) {
+          this.stopFiring();
+          freshDrone.status = 'Hit';
+          await freshDrone.save();
+          this.io.emit('drone:hit', { droneId, timestamp: new Date().toISOString() });
+          await new Promise((r) => setTimeout(r, 300));
+          freshDrone.status = 'Destroyed';
+          await freshDrone.save();
+          this.io.emit('drone:destroyed', { droneId });
+          const platformDoc = await WeaponPlatform.findOne({ isActive: true });
+          if (platformDoc) {
+            platformDoc.killCount += 1;
+            await platformDoc.save();
+            this.platform = { ...this.platform!, killCount: platformDoc.killCount };
+            this.io.emit('platform:status', this.platform);
+          }
+        } else {
+          this.io.emit('drone:missed', { droneId, outcome: 'Missed', timestamp: new Date().toISOString() });
+        }
+      };
+
+      await fireOneRound();
+      this.firingInterval = setInterval(async () => {
+        if (this.activeFiringDroneId !== droneId) return;
+        await fireOneRound();
+      }, SocketService.ROUND_INTERVAL_MS);
     } catch (error) {
       console.error('Engagement fire error:', error);
+      this.stopFiring();
     }
   }
 
@@ -387,38 +443,74 @@ export class SocketService {
   public async createTestDrones() {
     try {
       console.log('Starting drone creation...');
-      // First, clear existing test drones
-      await Drone.deleteMany({});
-      console.log('Cleared existing drones');
+      // Delete only friendly drones; keep all enemy drones
+      const deleted = await Drone.deleteMany({ isFriendly: true });
+      if (deleted.deletedCount > 0) {
+        console.log(`Cleared ${deleted.deletedCount} friendly drone(s)`);
+      }
 
-      // Create one of each type (threatLevel 0.0–1.0 per IDrone spec)
+      // Generate unique IDs per batch (add-only, never replace enemies)
+      const base = Date.now().toString(36).toUpperCase();
       const testDrones = [
         {
-          droneId: 'QUAD-001',
+          droneId: `QUAD-${base}-1`,
           droneType: 'Quadcopter',
           status: 'Detected',
           position: this.generateRandomPosition(this.platform!.position, 2000),
           speed: 15,
           heading: Math.random() * 360,
           threatLevel: 0.4,
+          isFriendly: false,
         },
         {
-          droneId: 'FIXED-001',
+          droneId: `QUAD-${base}-2`,
+          droneType: 'Quadcopter',
+          status: 'Detected',
+          position: this.generateRandomPosition(this.platform!.position, 2000),
+          speed: 18,
+          heading: Math.random() * 360,
+          threatLevel: 0.35,
+          isFriendly: false,
+        },
+        {
+          droneId: `FIXED-${base}-1`,
           droneType: 'FixedWing',
           status: 'Detected',
           position: this.generateRandomPosition(this.platform!.position, 2000),
           speed: 100,
           heading: Math.random() * 360,
           threatLevel: 0.6,
+          isFriendly: false,
         },
         {
-          droneId: 'VTOL-001',
+          droneId: `FIXED-${base}-2`,
+          droneType: 'FixedWing',
+          status: 'Detected',
+          position: this.generateRandomPosition(this.platform!.position, 2000),
+          speed: 95,
+          heading: Math.random() * 360,
+          threatLevel: 0.55,
+          isFriendly: false,
+        },
+        {
+          droneId: `VTOL-${base}-1`,
           droneType: 'VTOL',
           status: 'Detected',
           position: this.generateRandomPosition(this.platform!.position, 2000),
           speed: 50,
           heading: Math.random() * 360,
           threatLevel: 0.5,
+          isFriendly: false,
+        },
+        {
+          droneId: `VTOL-${base}-2`,
+          droneType: 'VTOL',
+          status: 'Detected',
+          position: this.generateRandomPosition(this.platform!.position, 2000),
+          speed: 45,
+          heading: Math.random() * 360,
+          threatLevel: 0.45,
+          isFriendly: false,
         },
       ];
 

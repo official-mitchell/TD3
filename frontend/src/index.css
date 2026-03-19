@@ -49,4 +49,76 @@ body {
   animation: fire-pulse-glow 1s ease-in-out infinite;
 }
 
+/* Fire button: subtle grow/shrink idle animation */
+@keyframes fire-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.fire-breathe {
+  animation: fire-breathe 2s ease-in-out infinite;
+}
+
+/* Fire button: recoil on press – grow fast, shrink with wobble */
+@keyframes fire-recoil {
+  0% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.25);
+  }
+  40% {
+    transform: scale(0.92);
+  }
+  55% {
+    transform: scale(1.02);
+  }
+  70% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.fire-recoil {
+  animation: fire-recoil 180ms ease-out;
+}
+
+/* Ammo overlay: casino rolling typography when count changes */
+@keyframes ammo-roll {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.ammo-roll {
+  animation: ammo-roll 0.35s ease-out;
+}
+
+/* Line of fire distance: white text, no background, centered on dotted line */
+.leaflet-tooltip.line-of-fire-distance {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+.leaflet-tooltip.line-of-fire-distance::before {
+  border-color: transparent !important;
+}
+
 /* Platform loading bar: 10 segments */

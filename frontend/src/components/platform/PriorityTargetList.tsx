@@ -9,6 +9,7 @@ import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { calculateDistance, calculateBearing } from '../../utils/calculations';
 import { formatAltitude, formatSpeed } from '../../utils/formatters';
+import { playSwivelSound } from '../../lib/sounds';
 import type { IDrone } from '@td3/shared-types';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -116,7 +117,10 @@ export const PriorityTargetList: React.FC = () => {
                 drone={drone}
                 index={index}
                 selected={selectedDroneId === drone.droneId}
-                onSelect={() => setSelected(drone.droneId)}
+                onSelect={() => {
+                  if (selectedDroneId !== drone.droneId) playSwivelSound();
+                  setSelected(drone.droneId);
+                }}
                 distKm={distKm}
                 bearingDeg={degrees}
               />

@@ -2,12 +2,14 @@
  * Drone Mongoose model. Uses shared types from @td3/shared-types.
  * Schema mirrors IDrone exactly per Implementation Plan Step 1.3.1.
  * Import only IDrone; DroneType/DroneStatus re-exported from shared-types.
+ * Added isFriendly (optional) for createTestDrones: delete friendlies only.
  */
 import mongoose, { Schema, Document } from 'mongoose';
 import type { IDrone } from '@td3/shared-types';
 
 export interface IDroneDocument extends Omit<IDrone, 'lastUpdated'>, Document {
   lastUpdated: Date;
+  isFriendly?: boolean;
 }
 
 const DroneSchema: Schema = new Schema<IDroneDocument>({
@@ -39,6 +41,7 @@ const DroneSchema: Schema = new Schema<IDroneDocument>({
   heading: { type: Number, required: true },
   threatLevel: { type: Number, required: true },
   lastUpdated: { type: Date, default: Date.now },
+  isFriendly: { type: Boolean, default: false, required: false },
 });
 
 export { type DroneType, type DroneStatus, type IDrone } from '@td3/shared-types';
