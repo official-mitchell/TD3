@@ -3,19 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --primary-bg: #0f172a;
-  --secondary-bg: #1e293b;
+  --primary-bg: #0A0E1A;
+  --secondary-bg: #0F1929;
+  --border-accent: #1A3A5C;
 }
 
+/* 5.5.2, 5.5.3: body background #0A0E1A, JetBrains Mono everywhere */
+html,
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--primary-bg);
-  color: white;
+  background-color: #0A0E1A;
+  color: #E8F4FD;
 }
 
 * {

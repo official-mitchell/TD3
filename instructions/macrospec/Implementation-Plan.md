@@ -256,15 +256,15 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 - [x] 4.4.1. Call `useSocket()` at the top level of `apps/frontend/src/App.tsx` so the connection is established once on app load. The hook return value is the socket ref, which can be passed down or accessed via a context if needed by child components (such as `BottomBar`).
 
-### 4.5 Acceptance criteria
+### 4.5 Acceptance criteria ✅
 
-4.5.1. Open the app locally with the backend running. Within 5 seconds, `connectionStore.status` equals `Connected` (verify via React DevTools Zustand plugin or a temporary debug display).
+- [x] 4.5.1. Open the app locally with the backend running. Within 5 seconds, `connectionStore.status` equals `Connected` (verify via React DevTools Zustand plugin or a temporary debug display).
 
-4.5.2. `droneStore.drones` starts populating with `IDrone` entries within 5 seconds of the connection being established.
+- [x] 4.5.2. `droneStore.drones` starts populating with `IDrone` entries within 5 seconds of the connection being established.
 
-4.5.3. Shut down the backend process. Within 15 seconds (heartbeat interval plus watchdog timeout), `connectionStore.status` transitions to `Offline`.
+- [x] 4.5.3. Shut down the backend process. Within 15 seconds (heartbeat interval plus watchdog timeout), `connectionStore.status` transitions to `Offline`.
 
-4.5.4. Restart the backend. The client reconnects automatically and `connectionStore.status` returns to `Connected` without a page reload.
+- [x] 4.5.4. Restart the backend. The client reconnects automatically and `connectionStore.status` returns to `Connected` without a page reload.
 
 ---
 
@@ -273,41 +273,41 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 **Depends on:** Nothing (can run in parallel with Steps 3 and 4).
 **Output:** `apps/frontend/src/theme.ts`, `apps/frontend/src/router.tsx`, and updated `apps/frontend/src/main.tsx`.
 
-### 5.1 Install dependencies
+### 5.1 Install dependencies ✅
 
-5.1.1. Install `@mui/material`, `@mui/icons-material`, `@emotion/react`, `@emotion/styled`, and `react-router-dom` as production dependencies.
+- [x] 5.1.1. Install `@mui/material`, `@mui/icons-material`, `@emotion/react`, `@emotion/styled`, and `react-router-dom` as production dependencies.
 
-5.1.2. Install `@fontsource/jetbrains-mono` and import it in `main.tsx` to ensure consistent monospace typography across environments without relying on system fonts.
+- [x] 5.1.2. Install `@fontsource/jetbrains-mono` and import it in `main.tsx` to ensure consistent monospace typography across environments without relying on system fonts.
 
-### 5.2 Dark military theme
+### 5.2 Dark military theme ✅
 
-5.2.1. Create `apps/frontend/src/theme.ts`. Use MUI `createTheme` with `mode: 'dark'`.
+- [x] 5.2.1. Create `apps/frontend/src/theme.ts`. Use MUI `createTheme` with `mode: 'dark'`.
 
-5.2.2. Set the color palette as follows: `primary.main` is `#1E90FF` (electric blue), `secondary.main` is `#FF6B35` (amber-orange), `background.default` is `#0A0E1A` (near-black navy), `background.paper` is `#0F1929` (dark card surface), `text.primary` is `#E8F4FD`, `text.secondary` is `#7B9BB5`, `success.main` is `#00C853`, `warning.main` is `#FFB300`, `error.main` is `#FF1744`.
+- [x] 5.2.2. Set the color palette as follows: `primary.main` is `#1E90FF` (electric blue), `secondary.main` is `#FF6B35` (amber-orange), `background.default` is `#0A0E1A` (near-black navy), `background.paper` is `#0F1929` (dark card surface), `text.primary` is `#E8F4FD`, `text.secondary` is `#7B9BB5`, `success.main` is `#00C853`, `warning.main` is `#FFB300`, `error.main` is `#FF1744`.
 
-5.2.3. Set the typography `fontFamily` to `JetBrains Mono, Courier New, monospace`. Set `h1` to `1.5rem`, bold, `0.1em` letter-spacing, uppercase. Set `h2` to `1rem`, semibold, `0.08em` letter-spacing, uppercase. Set `body2` to `0.75rem` with `0.05em` letter-spacing.
+- [x] 5.2.3. Set the typography `fontFamily` to `JetBrains Mono, Courier New, monospace`. Set `h1` to `1.5rem`, bold, `0.1em` letter-spacing, uppercase. Set `h2` to `1rem`, semibold, `0.08em` letter-spacing, uppercase. Set `body2` to `0.75rem` with `0.05em` letter-spacing.
 
-5.2.4. Apply component overrides: `MuiPaper` root should have `backgroundImage: none` and a `1px solid #1A3A5C` border. `MuiButton` root should use `border-radius: 2`, `0.1em` letter-spacing, and `font-weight: 700`.
+- [x] 5.2.4. Apply component overrides: `MuiPaper` root should have `backgroundImage: none` and a `1px solid #1A3A5C` border. `MuiButton` root should use `border-radius: 2`, `0.1em` letter-spacing, and `font-weight: 700`. Enhanced: MuiAppBar, MuiCard, MuiDrawer, MuiTextField, divider palette.
 
-### 5.3 Router configuration
+### 5.3 Router configuration ✅
 
-5.3.1. Create `apps/frontend/src/router.tsx`. Define routes using `createBrowserRouter` from `react-router-dom`.
+- [x] 5.3.1. Create `apps/frontend/src/router.tsx`. Define routes using `createBrowserRouter` from `react-router-dom`.
 
-5.3.2. Route `/` must redirect to `/dashboard` using `Navigate` with `replace: true`.
+- [x] 5.3.2. Route `/` must redirect to `/dashboard` using `Navigate` with `replace: true`.
 
-5.3.3. Route `/dashboard` renders `DashboardView`. Leave the `/history` route commented out as a placeholder for the stretch phase.
+- [x] 5.3.3. Route `/dashboard` renders `DashboardView`. Leave the `/history` route commented out as a placeholder for the stretch phase.
 
-### 5.4 App entry point
+### 5.4 App entry point ✅
 
-5.4.1. Update `apps/frontend/src/main.tsx`. Wrap the `RouterProvider` in both `ThemeProvider` (passing the `td3Theme`) and `CssBaseline` to normalize browser styles.
+- [x] 5.4.1. Update `apps/frontend/src/main.tsx`. Wrap the `RouterProvider` in both `ThemeProvider` (passing the `td3Theme`) and `CssBaseline` to normalize browser styles.
 
-### 5.5 Acceptance criteria
+### 5.5 Acceptance criteria ✅
 
-5.5.1. Navigating to `/` redirects to `/dashboard` without a visible flash.
+- [x] 5.5.1. Navigating to `/` redirects to `/dashboard` without a visible flash.
 
-5.5.2. `document.body` background color is `#0A0E1A`.
+- [x] 5.5.2. `document.body` background color is `#0A0E1A`.
 
-5.5.3. All text uses JetBrains Mono or a monospace fallback.
+- [x] 5.5.3. All text uses JetBrains Mono or a monospace fallback.
 
 ---
 
@@ -1177,3 +1177,5 @@ td3/
 | 2026-03-18 | **Phase 3.6–3.7:** Created engagementLogStore.ts with log, appendLog, clearLog (max 200). Fixed TypeScript: LogEntries (Copter→Circle), LogPanel (export types, fix mock), tsconfig.app rootDir+include for shared-types. All stores compile with zero errors. |
 | 2026-03-18 | **Phase 2.1 + 4.1–4.4:** Added "(pending — not yet implemented)" to 2.1 header. socket.io-client already in deps. useSocket: useRef, VITE_SOCKET_URL fallback 3333, reconnection config, connectionStore/connectionStore/platformStore/engagementLogStore routing, droneUpdate+drone:update, platform:status, drone:destroyed, drone:hit, drone:missed, heartbeat:ping/pong (5s interval, 12s watchdog). Mounted useSocket in App.tsx. Backend: emit platform:status on connect. |
 | 2026-03-18 | **Phase 4.5 Acceptance:** Added temporary debug display in Navbar showing `connectionStore.status` (Connected/Offline/Degraded) and `droneStore.drones.size`. Enables verification of 4.5.1–4.5.4 without React DevTools. Manual verification: start backend+frontend → status=Connected, drones populate; stop backend → status→Offline within ~15s; restart backend → status→Connected without reload. |
+| 2026-03-18 | **Phase 5.1–5.4:** Checked off 4.5.1–4.5.4. Installed @mui/icons-material@^6, @fontsource/jetbrains-mono. Created theme.ts: dark palette, JetBrains Mono typography, MuiPaper/MuiButton overrides; enhanced with MuiAppBar, MuiCard, MuiDrawer, MuiTextField, divider. Created router.tsx: / → Navigate /dashboard, /dashboard → DashboardView, /history commented. Created views/DashboardView.tsx (wraps MainLayout). main.tsx: ThemeProvider, CssBaseline, @fontsource/jetbrains-mono. App: RouterProvider. index.css: theme colors, JetBrains Mono font. MainLayout: theme background. |
+| 2026-03-18 | **Phase 5.5 Acceptance:** index.html body inline critical styles (background #0A0E1A, color, font-family) to prevent white flash before React load. index.css: html+body font cascade, explicit #0A0E1A background. Meets 5.5.1 (no flash), 5.5.2 (body bg), 5.5.3 (JetBrains Mono + monospace fallback). |

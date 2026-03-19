@@ -1,3 +1,6 @@
+/**
+ * Main dashboard layout. Background and text colors aligned with td3Theme (5.2).
+ */
 import React from 'react';
 import { Navbar } from '@components/platform/Navbar';
 import { StatusCards } from '../components/platform/StatusCards';
@@ -9,7 +12,7 @@ import { LogPanel } from '@components/logs/LogPanel';
 
 const MainLayout: React.FC = () => {
   return (
-    <div className="min-h-screen w-full bg-slate-900 text-white">
+    <div className="min-h-screen w-full bg-[#0A0E1A] text-[#E8F4FD]">
       {/* Navbar */}
       <Navbar />
 
