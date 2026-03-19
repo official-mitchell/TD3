@@ -4,6 +4,10 @@
  * Ammo count removed from button label. Firing continues until hit (backend 200/min).
  * Left/Right arrow keys switch target (prev/next by distance).
  * Uses firingDroneIdRef so ENGAGING resets on drone:destroyed even if selectedDroneId changes first.
+ * Resets ENGAGING when user changes target (selectedDroneId !== firing target).
+ * Debug: console.log [MapFireButton] when firing (every 2s) and on drone:destroyed/target-change.
+ * Resets ENGAGING when target drone status is no longer Engagement Ready or Hit (e.g. reverted to Confirmed).
+ * Resets on drone:missed immediately (backend fires ~300ms/round; miss = reset right away).
  */
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDroneStore } from '../../store/droneStore';
@@ -11,8 +15,8 @@ import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { getSocket } from '../../lib/socketRef';
 import { playFireSound, playRichochetSounds, playSwivelSound } from '../../lib/sounds';
-import { PLATFORM_CONSTANTS } from '../../utils/constants';
-import { calculateBearing } from '../../utils/calculations';
+import { PLATFORM_CONSTANTS, TURRET_SWIVEL_MS_PER_360 } from '../../utils/constants';
+import { calculateBearing, calculateElevationAngle } from '../../utils/calculations';
 
 /** Mac: ⌘↵, PC: Ctrl+↵ */
 const getFireShortcutLabel = (): string =>
@@ -28,10 +32,12 @@ export const MapFireButton: React.FC = () => {
   const prevTarget = useTargetStore((s) => s.prevTarget);
   const [firing, setFiring] = useState(false);
   const [recoiling, setRecoiling] = useState(false);
+  const [barrelHeightReady, setBarrelHeightReady] = useState(false);
+  const barrelHeightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
   const sortedIds = useMemo(
-    () => useDroneStore.getState().getSortedByDistance(center.lat, center.lng).map((d) => d.droneId),
+    () => useDroneStore.getState().getEngageableTargets(center.lat, center.lng).map((d) => d.droneId),
     [drones, platform]
   );
   const selectedDrone = selectedDroneId ? drones.get(selectedDroneId) : null;
@@ -50,10 +56,38 @@ export const MapFireButton: React.FC = () => {
     return Math.abs(d) < 2;
   })();
 
+  const elevationAngle = useMemo(() => {
+    if (!platform || !selectedDrone) return 0;
+    return calculateElevationAngle(platform.position, selectedDrone.position);
+  }, [platform, selectedDrone]);
+
+  const barrelHeightAdjustmentMs = Math.max(
+    300,
+    (Math.abs(elevationAngle) / 360) * TURRET_SWIVEL_MS_PER_360
+  );
+
+  useEffect(() => {
+    if (barrelHeightTimerRef.current) clearTimeout(barrelHeightTimerRef.current);
+    barrelHeightTimerRef.current = null;
+    setBarrelHeightReady(false);
+
+    if (!selectedDrone || !turretAligned || !platform) return;
+
+    barrelHeightTimerRef.current = setTimeout(() => {
+      barrelHeightTimerRef.current = null;
+      setBarrelHeightReady(true);
+    }, barrelHeightAdjustmentMs);
+
+    return () => {
+      if (barrelHeightTimerRef.current) clearTimeout(barrelHeightTimerRef.current);
+    };
+  }, [selectedDroneId, turretAligned, platform, barrelHeightAdjustmentMs]);
+
   const canFire =
     selectedDrone?.status === 'Engagement Ready' &&
     !firing &&
     turretAligned &&
+    barrelHeightReady &&
     (platform?.isActive ?? false) === true;
 
   const firingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,6 +97,7 @@ export const MapFireButton: React.FC = () => {
     if (!canFire || !selectedDroneId) return;
     const socket = getSocket();
     if (!socket) return;
+    console.log('[MapFireButton] FIRE pressed', { selectedDroneId, socketConnected: !!socket });
     if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
     firingDroneIdRef.current = selectedDroneId;
     setFiring(true);
@@ -81,18 +116,70 @@ export const MapFireButton: React.FC = () => {
     const socket = getSocket();
     if (!socket) return;
     const onDestroyed = (payload: { droneId: string }) => {
+      console.log('[MapFireButton] drone:destroyed', { payloadDroneId: payload.droneId, firingDroneIdRef: firingDroneIdRef.current, match: payload.droneId === firingDroneIdRef.current });
       if (payload.droneId === firingDroneIdRef.current) {
         if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
         firingDroneIdRef.current = null;
         setFiring(false);
       }
     };
+    const onMissed = (payload: { droneId: string }) => {
+      if (payload.droneId === firingDroneIdRef.current) {
+        console.log('[MapFireButton] drone:missed, resetting ENGAGING', { payloadDroneId: payload.droneId });
+        if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
+        firingDroneIdRef.current = null;
+        setFiring(false);
+      }
+    };
     socket.on('drone:destroyed', onDestroyed);
+    socket.on('drone:missed', onMissed);
     return () => {
       socket.off('drone:destroyed', onDestroyed);
+      socket.off('drone:missed', onMissed);
       if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (firingDroneIdRef.current != null && selectedDroneId !== firingDroneIdRef.current) {
+      console.log('[MapFireButton] target changed, resetting ENGAGING', { selectedDroneId, firingDroneIdRef: firingDroneIdRef.current });
+      if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
+      firingDroneIdRef.current = null;
+      setFiring(false);
+    }
+  }, [selectedDroneId]);
+
+  useEffect(() => {
+    if (!firing || firingDroneIdRef.current == null) return;
+    const targetDrone = firingDroneIdRef.current === selectedDroneId ? selectedDrone : drones.get(firingDroneIdRef.current);
+    const status = targetDrone?.status;
+    if (status !== 'Engagement Ready' && status !== 'Hit') {
+      console.log('[MapFireButton] target no longer engageable, resetting ENGAGING', { firingDroneIdRef: firingDroneIdRef.current, status });
+      if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
+      firingDroneIdRef.current = null;
+      setFiring(false);
+    }
+  }, [firing, selectedDroneId, selectedDrone, drones]);
+
+  useEffect(() => {
+    if (!firing) return;
+    const log = () => {
+      console.log('[MapFireButton] ENGAGING state:', {
+        firing,
+        firingDroneIdRef: firingDroneIdRef.current,
+        selectedDroneId,
+        selectedDroneStatus: selectedDrone?.status,
+        platformActive: platform?.isActive,
+        turretAligned,
+        targetBearing,
+        currentTurretHeading,
+        socketConnected: !!getSocket(),
+      });
+    };
+    log();
+    const id = setInterval(log, 2000);
+    return () => clearInterval(id);
+  }, [firing, selectedDroneId, selectedDrone?.status, platform?.isActive, turretAligned, targetBearing, currentTurretHeading]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -132,7 +219,13 @@ export const MapFireButton: React.FC = () => {
     ? 'ENGAGING…'
     : canFire
       ? `FIRE ${shortcut}`
-      : `NO TARGET ${shortcut}`;
+      : selectedDrone && selectedDrone.status === 'Engagement Ready' && platform?.isActive
+        ? !turretAligned
+          ? 'Rotating…'
+          : !barrelHeightReady
+            ? 'Adjusting Barrel Height…'
+            : `NO TARGET ${shortcut}`
+        : `NO TARGET ${shortcut}`;
 
   const noFireReason =
     !canFire && !firing
@@ -152,8 +245,10 @@ export const MapFireButton: React.FC = () => {
                 return reasons.length > 0 ? reasons.join(' · ') : 'Target must be Engagement Ready';
               })()
             : selectedDrone && !turretAligned
-              ? 'Turret heading or altitude does not match selected target'
-              : null
+              ? 'Turret rotating to target'
+              : selectedDrone && !barrelHeightReady
+                ? 'Adjusting barrel height'
+                : null
       : null;
 
   return (

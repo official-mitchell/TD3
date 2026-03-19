@@ -2,11 +2,13 @@
  * Socket.IO service — telemetry simulation and engagement handling.
  * Phase 2.4: heartbeat:ping → heartbeat:pong. Added engagement:fire handler (Step 2.1).
  * createTestDrones: add-only (no delete of enemies), delete friendlies only, 6 enemy drones per batch.
+ * Migrates legacy drones (hitPoints missing or 1) to random 1–10 before creating new batch.
  * refillAmmo: sets ammo to 2000 and broadcasts platform:status.
  * handleEngagementFire: decrement ammo by 3 on BOTH hit and miss (fixes frontend reset bug).
  */
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import type { IPosition } from '@td3/shared-types';
 import Drone, {
   IDrone,
   IDroneDocument,
@@ -358,9 +360,10 @@ export class SocketService {
         const distanceM = this.calculateDistance(freshDrone.position, this.platform.position);
         const rangeFactor = Math.max(0, 1 - distanceM / 2000);
         const speedPenalty = freshDrone.speed / 500;
-        const hitProbability = Math.min(1, Math.max(0,
+        const baseHitProbability = Math.min(1, Math.max(0,
           0.85 * rangeFactor * (1 - speedPenalty * 0.3)
         ));
+        const hitProbability = baseHitProbability * 0.15;
         const roll = Math.random();
         const isHit = roll <= hitProbability;
 
@@ -373,20 +376,43 @@ export class SocketService {
         });
 
         if (isHit) {
-          this.stopFiring();
-          freshDrone.status = 'Hit';
+          const doc = freshDrone as IDroneDocument & { hitPoints?: number };
+          const hp = doc.hitPoints ?? 1;
+          const newHP = Math.max(0, hp - 1);
+          (doc as any).hitPoints = newHP;
           await freshDrone.save();
-          this.io.emit('drone:hit', { droneId, timestamp: new Date().toISOString() });
-          await new Promise((r) => setTimeout(r, 300));
-          freshDrone.status = 'Destroyed';
-          await freshDrone.save();
-          this.io.emit('drone:destroyed', { droneId });
-          const platformDoc = await WeaponPlatform.findOne({ isActive: true });
-          if (platformDoc) {
-            platformDoc.killCount += 1;
-            await platformDoc.save();
-            this.platform = { ...this.platform!, killCount: platformDoc.killCount };
-            this.io.emit('platform:status', this.platform);
+
+          if (newHP <= 0) {
+            this.stopFiring();
+            freshDrone.status = 'Hit';
+            await freshDrone.save();
+            this.io.emit('drone:hit', { droneId, timestamp: new Date().toISOString(), hitPointsRemaining: 0 });
+            await new Promise((r) => setTimeout(r, 300));
+            freshDrone.status = 'Destroyed';
+            await freshDrone.save();
+            this.io.emit('drone:destroyed', { droneId });
+            const platformDoc = await WeaponPlatform.findOne({ isActive: true });
+            if (platformDoc) {
+              platformDoc.killCount += 1;
+              await platformDoc.save();
+              this.platform = { ...this.platform!, killCount: platformDoc.killCount };
+              this.io.emit('platform:status', this.platform);
+            }
+          } else {
+            const obj = freshDrone.toObject() as unknown as Record<string, unknown>;
+            const payload: IDrone = {
+              droneId: obj.droneId as string,
+              droneType: obj.droneType as IDrone['droneType'],
+              status: obj.status as IDrone['status'],
+              position: obj.position as IPosition,
+              speed: obj.speed as number,
+              heading: obj.heading as number,
+              threatLevel: obj.threatLevel as number,
+              lastUpdated: new Date().toISOString(),
+              hitPoints: newHP,
+            };
+            this.io.emit('drone:update', payload);
+            this.io.emit('drone:hit', { droneId, timestamp: new Date().toISOString(), hitPointsRemaining: newHP });
           }
         } else {
           this.io.emit('drone:missed', { droneId, outcome: 'Missed', timestamp: new Date().toISOString() });
@@ -443,6 +469,18 @@ export class SocketService {
   public async createTestDrones() {
     try {
       console.log('Starting drone creation...');
+      // Migrate legacy drones: set hitPoints 1–10 for any with missing or default 1
+      const randHP = () => Math.floor(Math.random() * 10) + 1;
+      const legacy = await Drone.find({
+        $or: [{ hitPoints: { $exists: false } }, { hitPoints: 1 }],
+      });
+      for (const d of legacy) {
+        d.hitPoints = randHP();
+        await d.save();
+      }
+      if (legacy.length > 0) {
+        console.log(`Migrated ${legacy.length} drone(s) to random hitPoints 1–10`);
+      }
       // Delete only friendly drones; keep all enemy drones
       const deleted = await Drone.deleteMany({ isFriendly: true });
       if (deleted.deletedCount > 0) {
@@ -461,6 +499,7 @@ export class SocketService {
           heading: Math.random() * 360,
           threatLevel: 0.4,
           isFriendly: false,
+          hitPoints: randHP(),
         },
         {
           droneId: `QUAD-${base}-2`,
@@ -471,6 +510,7 @@ export class SocketService {
           heading: Math.random() * 360,
           threatLevel: 0.35,
           isFriendly: false,
+          hitPoints: randHP(),
         },
         {
           droneId: `FIXED-${base}-1`,
@@ -481,6 +521,7 @@ export class SocketService {
           heading: Math.random() * 360,
           threatLevel: 0.6,
           isFriendly: false,
+          hitPoints: randHP(),
         },
         {
           droneId: `FIXED-${base}-2`,
@@ -491,6 +532,7 @@ export class SocketService {
           heading: Math.random() * 360,
           threatLevel: 0.55,
           isFriendly: false,
+          hitPoints: randHP(),
         },
         {
           droneId: `VTOL-${base}-1`,
@@ -501,6 +543,7 @@ export class SocketService {
           heading: Math.random() * 360,
           threatLevel: 0.5,
           isFriendly: false,
+          hitPoints: randHP(),
         },
         {
           droneId: `VTOL-${base}-2`,
@@ -511,6 +554,7 @@ export class SocketService {
           heading: Math.random() * 360,
           threatLevel: 0.45,
           isFriendly: false,
+          hitPoints: randHP(),
         },
       ];
 

@@ -22,7 +22,7 @@ export const BottomBar: React.FC = () => {
 
   const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
   const sortedIds = useMemo(
-    () => useDroneStore.getState().getSortedByDistance(center.lat, center.lng).map((d) => d.droneId),
+    () => useDroneStore.getState().getEngageableTargets(center.lat, center.lng).map((d) => d.droneId),
     [drones, platform]
   );
   const selectedDrone = selectedDroneId ? drones.get(selectedDroneId) : null;

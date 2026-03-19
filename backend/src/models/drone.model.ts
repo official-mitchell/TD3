@@ -42,6 +42,7 @@ const DroneSchema: Schema = new Schema<IDroneDocument>({
   threatLevel: { type: Number, required: true },
   lastUpdated: { type: Date, default: Date.now },
   isFriendly: { type: Boolean, default: false, required: false },
+  hitPoints: { type: Number, default: 1, required: false },
 });
 
 export { type DroneType, type DroneStatus, type IDrone } from '@td3/shared-types';

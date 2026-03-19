@@ -101,7 +101,7 @@ export const useSocket = () => {
       const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
       const sortedIds = useDroneStore
         .getState()
-        .getSortedByDistance(center.lat, center.lng)
+        .getEngageableTargets(center.lat, center.lng)
         .map((d) => d.droneId);
       useTargetStore.getState().nextTarget(sortedIds);
     });

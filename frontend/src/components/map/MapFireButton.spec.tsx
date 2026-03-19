@@ -107,6 +107,7 @@ describe('MapFireButton', () => {
   });
 
   it('FIRE activates when drone is Engagement Ready and turret aligned', () => {
+    vi.useFakeTimers();
     usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
     useDroneStore.setState({
       drones: new Map([
@@ -115,6 +116,7 @@ describe('MapFireButton', () => {
     });
     useTargetStore.setState({ selectedDroneId: 'D1' });
     render(<MapFireButton />);
+    act(() => { vi.advanceTimersByTime(400); });
     const fireBtn = screen.getByRole('button', { name: /FIRE/ });
     expect(fireBtn).toBeTruthy();
     expect((fireBtn as HTMLButtonElement).disabled).toBe(false);
@@ -129,10 +131,37 @@ describe('MapFireButton', () => {
     });
     useTargetStore.setState({ selectedDroneId: 'D1' });
     render(<MapFireButton />);
-    expect(screen.getByText('Turret heading or altitude does not match selected target')).toBeTruthy();
+    expect(screen.getByText('Turret rotating to target')).toBeTruthy();
+  });
+
+  it('ENGAGING resets when user changes target (not stuck)', () => {
+    vi.useFakeTimers();
+    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
+    useDroneStore.setState({
+      drones: new Map([
+        ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
+        ['D2', createDrone({ droneId: 'D2', status: 'Engagement Ready', position: { lat: 37.79, lng: -122.4194, altitude: 100 } })],
+      ]),
+    });
+    useTargetStore.setState({ selectedDroneId: 'D1' });
+    render(<MapFireButton />);
+    act(() => { vi.advanceTimersByTime(400); });
+    const fireBtn = screen.getByRole('button', { name: /FIRE/ });
+    fireEvent.click(fireBtn);
+
+    expect(screen.getByText('ENGAGING…')).toBeTruthy();
+
+    act(() => {
+      useTargetStore.setState({ selectedDroneId: 'D2' });
+    });
+
+    expect(screen.queryByText('ENGAGING…')).toBeNull();
+    act(() => { vi.advanceTimersByTime(400); });
+    expect(screen.getByText(/FIRE|NO TARGET|Adjusting Barrel Height/)).toBeTruthy();
   });
 
   it('pressing FIRE emits engagement:fire and shows ENGAGING... until drone:destroyed', () => {
+    vi.useFakeTimers();
     usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
     useDroneStore.setState({
       drones: new Map([
@@ -141,6 +170,7 @@ describe('MapFireButton', () => {
     });
     useTargetStore.setState({ selectedDroneId: 'D1' });
     render(<MapFireButton />);
+    act(() => { vi.advanceTimersByTime(400); });
     const fireBtn = screen.getByRole('button', { name: /FIRE/ });
     fireEvent.click(fireBtn);
 

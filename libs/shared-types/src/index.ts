@@ -32,6 +32,8 @@ export interface IDrone {
   heading: number;
   threatLevel: number;
   lastUpdated: string;
+  /** Hit points (1–10). Drone destroyed when HP reaches 0. */
+  hitPoints?: number;
 }
 
 export interface IWeaponPlatform {

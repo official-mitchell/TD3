@@ -147,7 +147,7 @@ describe('BottomBar', () => {
       act(() => {
         useDroneStore.getState().removeDrone('D1');
         const center = PLATFORM.position;
-        const sortedIds = useDroneStore.getState().getSortedByDistance(center.lat, center.lng).map((d) => d.droneId);
+        const sortedIds = useDroneStore.getState().getEngageableTargets(center.lat, center.lng).map((d) => d.droneId);
         useTargetStore.getState().nextTarget(sortedIds);
       });
 

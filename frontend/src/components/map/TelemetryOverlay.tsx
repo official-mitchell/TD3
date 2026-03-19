@@ -74,6 +74,9 @@ export const TelemetryOverlay: React.FC = () => {
           <span className="text-slate-400">
             {distKm.toFixed(2)}km · {degrees.toFixed(0)}° {cardinal}
           </span>
+          {drone.hitPoints != null && (
+            <span className="text-amber-400 text-xs font-medium">HP: {drone.hitPoints}</span>
+          )}
           {drone.status === 'Engagement Ready' && (
             <span className="text-green-400 text-xs font-medium">✓ IN RANGE</span>
           )}
