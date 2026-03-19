@@ -690,9 +690,12 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 ## Frontend Fixes:
 
 - [x] make the telemetry overlay background 30% more transparent. 
-- [ ] cache recent user settings for size. Increase default size of the vehicle by 30% and drones by 15%
-- [ ] remove and consolidate target details to the interface itself.
+- [x] cache recent user settings for size. Increase default size of the vehicle by 30% and drones by 15%
+- [X] remove and consolidate target details to the interface itself.
 - [ ] allow me to press cmd + enter (on Mac) to fire the turret; different on PC — let's detect the user's device settings
+- [ ] show the keyboard shortcut, small underneath the fire button, based on the user's device
+- [ ] center the fire button inside of the map overlay in the center along the bottom center of the map with some bottom margin, add a glowing animation to the background gradient red color, add a grow/shrinking button size animation
+- [ ] add an animation to whenever the fire button is pressed the button itself grows out super quickly and shrinks really quickly as if it's shooting and recoiling, add some wobble as it grows and shrinks
 - [ ] enable sounds in settings... slider for sound volume... make frontend/src/assets/diesel-idle.mp3 always present
 - [ ] enable first 1.5 seconds of frontend/src/assets/mechanical-clamp.mp3 for swivel sound (have it fade out)
 - [ ] enable frontend/src/assets/a-10-warthog-brrrt.mp3 when firing
@@ -1233,3 +1236,5 @@ td3/
 | 2026-03-19 | **Telemetry overlay v7:** SpeedGauge: scale 0–200 km/h, major ticks every 10, half ticks every 5, 0 at true arc start, increased top margin (cy=42), reduced bottom margin. ElevationChart: positive X quadrant only (no negative X), arc lines and blue highlight on right side, blue 65% transparent (opacity 0.35). |
 | 2026-03-19 | **Telemetry overlay v8:** SpeedGauge: right semicircle (0 at top, 200 at bottom), centered (cy=HEIGHT/2-8), fill starts at 0 tick. ElevationChart: fixed d3 angle convention (0=12oc, π/2=3oc) — arc/radial lines/blue highlight now in positive X quadrant only (right side). |
 | 2026-03-19 | **Telemetry overlay v9:** SpeedGauge: 270° arc like car speedometer (0 bottom-left, 200 bottom-right, clockwise). ElevationChart: radial ticks use d3 coords (x=sin, y=-cos) so they stay in upper-right quadrant (positive X, positive Y), not below X axis. |
+| 2026-03-19 | **Frontend Fix — cache size settings + defaults:** uiStore: added zustand persist middleware for weaponSize/droneSize to localStorage (key `td3-ui-settings`). Default weaponSize 1.3 (+30% vehicle), droneSize 1.15 (+15% drones). User preferences persist across sessions. |
+| 2026-03-19 | **Frontend Fix — consolidate target details:** Removed DroneDetailPanel. Target details (ID, type, status, distance, bearing, IN RANGE) now in TelemetryOverlay header on map. TargetPanel: PriorityTargetList only; slim "Select a target from the list above" footer when targets exist but none selected. Deleted DroneDetailPanel.tsx. Updated TargetPanel.spec and TelemetryOverlay.spec. |

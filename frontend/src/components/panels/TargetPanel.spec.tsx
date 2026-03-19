@@ -37,9 +37,13 @@ describe('TargetPanel', () => {
     useTargetStore.setState({ selectedDroneId: null });
   });
 
-  it('9.2.2: shows NO TARGET SELECTED when nothing selected', () => {
+  it('9.2.2: shows select-a-target hint when targets exist but none selected', () => {
+    usePlatformStore.setState({ platform: PLATFORM });
+    useDroneStore.setState({
+      drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready' })]]),
+    });
     render(<TargetPanel />);
-    expect(screen.getByText('NO TARGET SELECTED')).toBeTruthy();
+    expect(screen.getByText(/Select a target from the list above/)).toBeTruthy();
   });
 
   it('9.1.1: renders empty list when platform is null', () => {
@@ -47,7 +51,7 @@ describe('TargetPanel', () => {
     expect(screen.getByText(/No targets/)).toBeTruthy();
   });
 
-  it('9.1.2: clicking a card selects it and populates detail panel', () => {
+  it('9.1.2: clicking a card selects it and hides select hint', () => {
     usePlatformStore.setState({ platform: PLATFORM });
     useDroneStore.setState({
       drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready' })]]),
@@ -58,11 +62,10 @@ describe('TargetPanel', () => {
     fireEvent.click(screen.getByText('D1'));
 
     expect(useTargetStore.getState().selectedDroneId).toBe('D1');
-    expect(screen.queryByText('NO TARGET SELECTED')).toBeNull();
-    expect(screen.getByText(/Target Detail/)).toBeTruthy();
+    expect(screen.queryByText(/Select a target from the list above/)).toBeNull();
   });
 
-  it('9.2.3: detail panel shows drone data when selected', () => {
+  it('9.2.3: select hint hidden when target selected (detail in TelemetryOverlay on map)', () => {
     usePlatformStore.setState({ platform: PLATFORM });
     useDroneStore.setState({
       drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready' })]]),
@@ -70,8 +73,7 @@ describe('TargetPanel', () => {
     useTargetStore.setState({ selectedDroneId: 'D1' });
     render(<TargetPanel />);
 
-    expect(screen.getByText(/Target Detail/)).toBeTruthy();
-    expect(screen.getByText(/WITHIN ENGAGEMENT RANGE/)).toBeTruthy();
+    expect(screen.queryByText(/Select a target from the list above/)).toBeNull();
   });
 
   describe('9.3 Acceptance criteria', () => {
@@ -116,7 +118,7 @@ describe('TargetPanel', () => {
       expect(nearIdx).toBeLessThan(farIdx);
     });
 
-    it('9.3.3: clicking a card highlights it with blue border and populates detail panel', () => {
+    it('9.3.3: clicking a card highlights it with blue border and selects target', () => {
       usePlatformStore.setState({ platform: PLATFORM });
       useDroneStore.setState({
         drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready' })]]),
@@ -128,18 +130,16 @@ describe('TargetPanel', () => {
       fireEvent.click(card!);
 
       expect(card?.className).toContain('border-[#1E90FF]');
-      expect(screen.getByText(/Target Detail/)).toBeTruthy();
+      expect(useTargetStore.getState().selectedDroneId).toBe('D1');
     });
 
-    it('9.3.4: detail panel updates in real-time without losing selection', () => {
+    it('9.3.4: selection persists when drone data updates in real-time', () => {
       usePlatformStore.setState({ platform: PLATFORM });
       useDroneStore.setState({
         drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', speed: 50, position: { lat: 37.78, lng: -122.42, altitude: 100 } })]]),
       });
       useTargetStore.setState({ selectedDroneId: 'D1' });
       const { rerender } = render(<TargetPanel />);
-
-      expect(screen.getByText(/Target Detail/)).toBeTruthy();
 
       act(() => {
         useDroneStore.getState().updateDrone(
@@ -149,12 +149,10 @@ describe('TargetPanel', () => {
       rerender(<TargetPanel />);
 
       expect(useTargetStore.getState().selectedDroneId).toBe('D1');
-      expect(screen.getByText(/Target Detail/)).toBeTruthy();
-      expect(screen.getByText(/Speed:.*120/)).toBeTruthy();
-      expect(screen.getByText(/Altitude:.*200/)).toBeTruthy();
+      expect(screen.queryByText(/Select a target from the list above/)).toBeNull();
     });
 
-    it('9.3.5: when drone destroyed, detail panel shows NO TARGET SELECTED without auto-selecting next', () => {
+    it('9.3.5: when selected drone destroyed, shows select hint (target lost)', () => {
       usePlatformStore.setState({ platform: PLATFORM });
       useDroneStore.setState({
         drones: new Map([
@@ -165,19 +163,17 @@ describe('TargetPanel', () => {
       useTargetStore.setState({ selectedDroneId: 'D1' });
       render(<TargetPanel />);
 
-      expect(screen.getByText(/Target Detail/)).toBeTruthy();
-
       act(() => {
         useDroneStore.getState().removeDrone('D1');
       });
 
-      expect(screen.getByText('NO TARGET SELECTED')).toBeTruthy();
+      expect(screen.getByText(/Select a target from the list above/)).toBeTruthy();
       expect(useTargetStore.getState().selectedDroneId).toBe('D1');
     });
   });
 
   describe('Layout and formatting', () => {
-    it('detail panel formats altitude and speed to prevent overflow (no long floats)', () => {
+    it('PriorityTargetList cards format altitude and speed (gauges in TelemetryOverlay)', () => {
       usePlatformStore.setState({ platform: PLATFORM });
       useDroneStore.setState({
         drones: new Map([
@@ -192,14 +188,9 @@ describe('TargetPanel', () => {
           ],
         ]),
       });
-      useTargetStore.setState({ selectedDroneId: 'D1' });
       render(<TargetPanel />);
-
-      expect(screen.getByText(/Altitude: 119\.9m/)).toBeTruthy();
-      expect(screen.getByText(/Speed: 0 km\/h/)).toBeTruthy();
-      const detailText = screen.getByText(/Target Detail/).closest('div')?.textContent ?? '';
-      expect(detailText).not.toContain('119.93774470937251');
-      expect(detailText).not.toContain('0.0482954164347');
+      expect(screen.getByText(/119\.9m/)).toBeTruthy();
+      expect(screen.getByText(/0 km\/h/)).toBeTruthy();
     });
   });
 });

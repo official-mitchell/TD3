@@ -58,6 +58,14 @@ describe('TelemetryOverlay', () => {
     expect(screen.getByText('SPEED')).toBeTruthy();
   });
 
+  it('shows consolidated target header: drone ID, type, status, distance, bearing', () => {
+    renderWithTheme(<TelemetryOverlay />);
+    expect(screen.getByText('VTOL-001')).toBeTruthy();
+    expect(screen.getByText('VTOL')).toBeTruthy();
+    expect(screen.getByText('Engagement Ready')).toBeTruthy();
+    expect(screen.getByText(/IN RANGE/)).toBeTruthy();
+  });
+
   it('renders all five indicators in vertical layout', () => {
     renderWithTheme(<TelemetryOverlay />);
     expect(screen.getByText('SPEED')).toBeTruthy();
