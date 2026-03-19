@@ -1,151 +1,44 @@
 /**
- * Drone and platform REST routes. Phase 2.1 cleanup: removed POST /hit; history stub for TelemetryLog.
+ * Drone and platform REST routes. Phase 2.3: cleaned routes, standardized error handlers.
  */
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import Drone from '../models/drone.model';
-import { Request, Response } from 'express';
+import TelemetryLog from '../models/telemetry-log.model';
 import WeaponPlatform from '../models/weapon-platform.model';
+import { sendError } from '../lib/errorHandler';
+import type { DroneStatus } from '@td3/shared-types';
+
+const VALID_DRONE_STATUSES: DroneStatus[] = [
+  'Detected',
+  'Identified',
+  'Confirmed',
+  'Engagement Ready',
+  'Hit',
+  'Destroyed',
+];
 
 const router = Router();
 
-// Test route that doesn't need any dependencies
-router.get('/routes-check', (req: Request, res: Response) => {
-  console.log('Routes check endpoint hit');
-  return res.json({ message: 'Drone routes are loaded' });
-});
-
 router.post('/drones/test-types', async (req: Request, res: Response) => {
-  console.log('Test types endpoint hit');
   try {
     const socketService = req.app.get('socketService');
-    console.log('Got socket service:', socketService ? 'yes' : 'no');
     if (!socketService) {
-      return res.status(500).json({ message: 'Socket service not found' });
+      return sendError(res, 500, 'Socket service not found');
     }
-    await socketService.createTestDrones();
-    return res.json({ message: 'Test drones created' });
-    // const result = await socketService.createTestDrones();
-    // console.log('Created test drones:', result);
-    // return res.json(result);
+    const result = await socketService.createTestDrones();
+    return res.json(result);
   } catch (error) {
     console.error('Error in test-types endpoint:', error);
-    return res.status(500).json({ error: String(error) });
+    return sendError(res, 500, 'Error creating test drones', error);
   }
 });
 
-// GET all drones
 router.get('/drones', async (req: Request, res: Response) => {
   try {
     const drones = await Drone.find().sort({ lastUpdated: -1 });
     return res.json(drones);
   } catch (error) {
-    return res.status(500).json({ message: 'Error fetching drones', error });
-  }
-});
-
-// GET single drone by ID
-router.get('/drones/:droneId', async (req: Request, res: Response) => {
-  try {
-    const drone = await Drone.findOne({ droneId: req.params.droneId });
-    if (!drone) {
-      return res.status(404).json({ message: 'Drone not found' });
-    }
-    return res.json(drone);
-  } catch (error) {
-    return res.status(500).json({ message: 'Error fetching drone', error });
-  }
-});
-
-// GET drone history (TelemetryLog per Implementation Plan 2.3 — stub until model exists)
-router.get('/drones/:droneId/history', async (req: Request, res: Response) => {
-  try {
-    // TODO Phase 2.2/2.3: Query TelemetryLog by droneId, sort by timestamp desc, limit 50
-    return res.json([]);
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: 'Error fetching drone history', error });
-  }
-});
-
-router.get('/drones/check', async (req: Request, res: Response) => {
-  console.log('Check drones endpoint hit');
-  try {
-    const drones = await Drone.find();
-    console.log('Current drones:', drones);
-    return res.json(drones);
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to check drones' });
-  }
-});
-
-// Test endpoint to create sample drone
-router.post('/drones/test', async (req: Request, res: Response) => {
-  try {
-    const testDrone = new Drone({
-      droneId: 'TEST001',
-      status: 'Detected',
-      position: {
-        lat: 37.7749,
-        lng: -122.4194,
-        altitude: 100,
-      },
-      speed: 15.5,
-      heading: 180,
-      threatLevel: 0.5,
-    });
-
-    await testDrone.save();
-    return res.json({ message: 'Test drone created', drone: testDrone });
-  } catch (error: any) {
-    // Type the error parameter
-    console.error('Detailed error:', error);
-    return res.status(500).json({
-      message: 'Error creating test drone',
-      error: error.message,
-      details: error,
-    });
-  }
-});
-
-// Update drone status
-router.put('/drones/:droneId/status', async (req, res) => {
-  try {
-    const drone = await Drone.findOne({ droneId: req.params.droneId });
-    if (!drone) {
-      return res.status(404).json({ message: 'Drone not found' });
-    }
-    drone.status = req.body.status;
-    await drone.save();
-    return res.json(drone);
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: 'Error updating drone status', error });
-  }
-});
-
-// Delete drone
-router.delete('/drones/:droneId', async (req, res) => {
-  try {
-    const result = await Drone.deleteOne({ droneId: req.params.droneId });
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ message: 'Drone not found' });
-    }
-    return res.json({ message: 'Drone deleted successfully' });
-  } catch (error) {
-    return res.status(500).json({ message: 'Error deleting drone', error });
-  }
-});
-
-// Create custom drone
-router.post('/drones', async (req, res) => {
-  try {
-    const drone = new Drone(req.body);
-    await drone.save();
-    return res.status(201).json(drone);
-  } catch (error) {
-    return res.status(500).json({ message: 'Error creating drone', error });
+    return sendError(res, 500, 'Error fetching drones', error);
   }
 });
 
@@ -154,204 +47,144 @@ router.get('/drones/status', async (req: Request, res: Response) => {
     const drones = await Drone.find();
     return res.json({
       count: drones.length,
-      drones: drones.map((drone) => ({
-        id: drone.droneId,
-        status: drone.status,
-      })),
+      drones: drones.map((d) => ({ id: d.droneId, status: d.status })),
     });
   } catch (error) {
-    return res.status(500).json({ error: String(error) });
+    return sendError(res, 500, 'Error fetching drone status', error);
   }
 });
 
-// Clear drones
 router.post('/drones/clear', async (req: Request, res: Response) => {
   try {
     await Drone.deleteMany({});
     return res.json({ message: 'All drones cleared' });
   } catch (error) {
-    return res.status(500).json({ error: String(error) });
+    return sendError(res, 500, 'Error clearing drones', error);
   }
 });
 
-// Initialize weapon platform
+router.get('/drones/:droneId', async (req: Request, res: Response) => {
+  try {
+    const drone = await Drone.findOne({ droneId: req.params.droneId });
+    if (!drone) {
+      return sendError(res, 404, 'Drone not found');
+    }
+    return res.json(drone);
+  } catch (error) {
+    return sendError(res, 500, 'Error fetching drone', error);
+  }
+});
+
+router.get('/drones/:droneId/history', async (req: Request, res: Response) => {
+  try {
+    const logs = await TelemetryLog.find({ droneId: req.params.droneId })
+      .sort({ timestamp: -1 })
+      .limit(50)
+      .lean();
+    return res.json(logs);
+  } catch (error) {
+    return sendError(res, 500, 'Error fetching drone history', error);
+  }
+});
+
+router.post('/drones/test', async (req: Request, res: Response) => {
+  try {
+    const testDrone = new Drone({
+      droneId: 'TEST001',
+      status: 'Detected',
+      position: { lat: 37.7749, lng: -122.4194, altitude: 100 },
+      speed: 15.5,
+      heading: 180,
+      threatLevel: 0.5,
+    });
+    await testDrone.save();
+    return res.json({ message: 'Test drone created', drone: testDrone });
+  } catch (error) {
+    return sendError(res, 500, 'Error creating test drone', error);
+  }
+});
+
+router.put('/drones/:droneId/status', async (req: Request, res: Response) => {
+  try {
+    const { status } = req.body;
+    if (!status || !VALID_DRONE_STATUSES.includes(status)) {
+      return sendError(res, 400, 'Invalid status. Valid values: ' + VALID_DRONE_STATUSES.join(', '));
+    }
+    const drone = await Drone.findOne({ droneId: req.params.droneId });
+    if (!drone) {
+      return sendError(res, 404, 'Drone not found');
+    }
+    drone.status = status;
+    await drone.save();
+    return res.json(drone);
+  } catch (error) {
+    return sendError(res, 500, 'Error updating drone status', error);
+  }
+});
+
+router.delete('/drones/:droneId', async (req: Request, res: Response) => {
+  try {
+    const result = await Drone.deleteOne({ droneId: req.params.droneId });
+    if (result.deletedCount === 0) {
+      return sendError(res, 404, 'Drone not found');
+    }
+    return res.json({ message: 'Drone deleted successfully' });
+  } catch (error) {
+    return sendError(res, 500, 'Error deleting drone', error);
+  }
+});
+
+router.post('/drones', async (req: Request, res: Response) => {
+  try {
+    const drone = new Drone(req.body);
+    await drone.save();
+    return res.status(201).json(drone);
+  } catch (error) {
+    return sendError(res, 500, 'Error creating drone', error);
+  }
+});
+
 router.post('/platform/init', async (req: Request, res: Response) => {
   try {
-    // Remove any existing platform
     await WeaponPlatform.deleteMany({});
-
-    // Create new platform at default position
     const platform = new WeaponPlatform({
-      position: {
-        lat: 37.7749, // Default position (can be made configurable)
-        lng: -122.4194,
-      },
+      position: { lat: 37.7749, lng: -122.4194 },
       heading: 0,
       isActive: true,
+      ammoCount: 300,
+      killCount: 0,
     });
-
     await platform.save();
     return res.json(platform);
   } catch (error) {
-    return res.status(500).json({ error: String(error) });
+    return sendError(res, 500, 'Error initializing platform', error);
   }
 });
 
-// Get platform status
 router.get('/platform/status', async (req: Request, res: Response) => {
   try {
     const platform = await WeaponPlatform.findOne({ isActive: true });
     if (!platform) {
-      return res
-        .status(404)
-        .json({ message: 'No active weapon platform found' });
+      return sendError(res, 404, 'No active weapon platform found');
     }
     return res.json(platform);
   } catch (error) {
-    return res.status(500).json({ error: String(error) });
+    return sendError(res, 500, 'Error fetching platform status', error);
   }
 });
 
-// Test platform initialization and status
 router.get('/platform/test', async (req: Request, res: Response) => {
   try {
-    // Init platform
     const platform = await WeaponPlatform.findOne({ isActive: true });
-
-    // Get nearby drones
     const drones = await Drone.find();
-
-    // Return combined status
     return res.json({
-      platform: platform,
+      platform,
       droneCount: drones.length,
       platformStatus: platform ? 'active' : 'not initialized',
     });
   } catch (error) {
-    return res.status(500).json({ error: String(error) });
+    return sendError(res, 500, 'Error fetching platform test data', error);
   }
 });
 
 export default router;
-
-// import { Router } from 'express';
-// import Drone from '../models/drone.model';
-// import { Request, Response } from 'express';
-
-// const router = Router();
-
-// // GET all drones
-// router.get('/drones', async (req: Request, res: Response) => {
-//   try {
-//     const drones = await Drone.find().sort({ lastUpdated: -1 });
-//     return res.json(drones); // Added return
-//   } catch (error) {
-//     return res.status(500).json({ message: 'Error fetching drones', error }); // Added return
-//   }
-// });
-
-// // GET single drone by ID
-// router.get('/drones/:droneId', async (req: Request, res: Response) => {
-//   try {
-//     const drone = await Drone.findOne({ droneId: req.params.droneId });
-//     if (!drone) {
-//       return res.status(404).json({ message: 'Drone not found' });
-//     }
-//     return res.json(drone); // Added return
-//   } catch (error) {
-//     return res.status(500).json({ message: 'Error fetching drone', error }); // Added return
-//   }
-// });
-
-// // GET drone history
-// router.get('/drones/:droneId/history', async (req: Request, res: Response) => {
-//   try {
-//     const drone = await Drone.findOne({ droneId: req.params.droneId });
-//     if (!drone) {
-//       return res.status(404).json({ message: 'Drone not found' });
-//     }
-//     return res.json(drone.engagementHistory); // Added return
-//   } catch (error) {
-//     return res
-//       .status(500)
-//       .json({ message: 'Error fetching drone history', error }); // Added return
-//   }
-// });
-
-// export default router;
-
-// import { Router } from 'express';
-// import Drone from '../models/drone.model';
-// import { Request, Response } from 'express';
-
-// const router = Router();
-
-// // GET all drones
-// router.get('/drones', async (req: Request, res: Response) => {
-//   try {
-//     const drones = await Drone.find().sort({ lastUpdated: -1 });
-//     res.json(drones);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error fetching drones', error });
-//   }
-// });
-
-// // GET single drone by ID
-// router.get('/drones/:droneId', async (req: Request, res: Response) => {
-//   try {
-//     const drone = await Drone.findOne({ droneId: req.params.droneId });
-//     if (!drone) {
-//       return res.status(404).json({ message: 'Drone not found' });
-//     }
-//     res.json(drone);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error fetching drone', error });
-//   }
-// });
-
-// // GET drone history
-// router.get('/drones/:droneId/history', async (req: Request, res: Response) => {
-//   try {
-//     const drone = await Drone.findOne({ droneId: req.params.droneId });
-//     if (!drone) {
-//       return res.status(404).json({ message: 'Drone not found' });
-//     }
-//     res.json(drone.engagementHistory);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error fetching drone history', error });
-//   }
-// });
-
-// Original test endpoint
-// router.post('/drones/test', async (req: Request, res: Response) => {
-//   // ... test drone creation code ...
-//   // In your terminal, you can use MongoDB CLI, or we can add a test endpoint:
-//   try {
-//     const testDrone = new Drone({
-//       droneId: 'TEST001',
-//       status: 'Detected',
-//       position: {
-//         lat: 37.7749,
-//         lng: -122.4194,
-//         altitude: 100,
-//       },
-//       speed: 15.5,
-//       heading: 180,
-//       threatLevel: 3,
-//       engagementHistory: [
-//         {
-//           timestamp: new Date(),
-//           action: 'Initial Detection',
-//           details: 'Drone first spotted',
-//         },
-//       ],
-//     });
-
-//     await testDrone.save();
-//     res.json({ message: 'Test drone created', drone: testDrone });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error creating test drone', error });
-//   }
-// });
-
-// export default router;

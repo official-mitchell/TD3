@@ -1,3 +1,6 @@
+/**
+ * TD3 Backend entry point. Phase 2.3: cleaned error middleware.
+ */
 import express, { Request, Response, NextFunction } from 'express';
 import * as path from 'path';
 import cors from 'cors';
@@ -5,7 +8,6 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import mongoose from 'mongoose';
 import droneRoutes from './routes/drone.routes';
-// import { Server } from 'socket.io';
 import SocketService from './services/socket-service';
 
 const app = express();
@@ -61,24 +63,23 @@ app.use(express.urlencoded({ extended: true }));
 // Static files
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
-// Basic error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+// Error handling middleware (catches errors passed to next())
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : {},
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined,
   });
 });
 
 app.use('/api', droneRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date() });
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Your existing welcome endpoint
-app.get('/api', (req: Request, res: Response) => {
+app.get('/api', (_req: Request, res: Response) => {
   res.json({ message: 'Welcome to backend!' });
 });
 
@@ -106,23 +107,3 @@ process.on('SIGTERM', () => {
 });
 
 export { socketService };
-
-// Socket.io setup
-// const io = new Server(server, {
-//   cors: {
-//     origin:
-//       process.env.NODE_ENV === 'production'
-//         ? 'your-production-domain'
-//         : 'http://localhost:3000',
-//     methods: ['GET', 'POST'],
-//   },
-// });
-
-// // Socket.io connection handling
-// io.on('connection', (socket) => {
-//   console.log('Client connected');
-
-//   socket.on('disconnect', () => {
-//     console.log('Client disconnected');
-//   });
-// });

@@ -1,6 +1,6 @@
 /**
  * Socket.IO service — telemetry simulation and engagement handling.
- * Phase 2.1 cleanup: removed legacy handleDroneHit; engagement:fire handler to be added per Implementation Plan 2.1.
+ * Phase 2.4: heartbeat:ping → heartbeat:pong handler added.
  */
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
@@ -42,10 +42,6 @@ export class SocketService {
     this.io = new SocketServer(server, {
       cors: {
         origin: ['http://localhost:3000', 'http://localhost:8000'],
-        // origin:
-        //   process.env.NODE_ENV === 'production'
-        //     ? 'your-production-domain'
-        //     : 'http://localhost:3000',
         methods: ['GET', 'POST'],
       },
     });
@@ -58,15 +54,14 @@ export class SocketService {
     this.io.on('connection', (socket) => {
       console.log('Client connected');
 
-      // Send initial drone data
       this.emitInitialDroneData(socket);
 
-      // Handle client events
       socket.on('requestDroneUpdate', async (droneId: string) => {
         await this.updateDrone(droneId);
-        socket.on('disconnect', () => {
-          console.log('Client disconnected');
-        });
+      });
+
+      socket.on('heartbeat:ping', () => {
+        socket.emit('heartbeat:pong');
       });
 
       socket.on('disconnect', () => {

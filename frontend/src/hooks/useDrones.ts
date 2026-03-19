@@ -1,41 +1,35 @@
+/**
+ * useDrones — uses droneStore.getSortedByDistance and targetStore for selection.
+ */
 import { useCallback } from 'react';
 import { useDroneStore } from '../store/droneStore';
-import { calculateDistance } from '../utils/calculations';
+import { useTargetStore } from '../store/targetStore';
 import { usePlatformStore } from '../store/platformStore';
 
 export const useDrones = () => {
-  const { drones, selectedTargets } = useDroneStore();
-  const { actions } = useDroneStore();
-  const platformPosition = usePlatformStore((state) => state.platform.position);
+  const drones = useDroneStore((state) => state.drones);
+  const getSortedByDistance = useDroneStore((state) => state.getSortedByDistance);
+  const selectedDroneId = useTargetStore((state) => state.selectedDroneId);
+  const setSelected = useTargetStore((state) => state.setSelected);
+  const platform = usePlatformStore((state) => state.platform);
 
-  const EFFECTIVE_RANGE = 2000; // 2km range
-
-  // Get drones within engagement range
   const getTargetableDrones = useCallback(() => {
-    return Array.from(drones.values())
-      .filter((drone) => {
-        const distance = calculateDistance(drone.position, platformPosition);
-        return (
-          distance <= EFFECTIVE_RANGE &&
-          !['Destroyed', 'Hit'].includes(drone.status)
-        );
-      })
-      .sort((a, b) => b.threatLevel - a.threatLevel);
-  }, [drones, platformPosition]);
+    if (!platform) return [];
+    return getSortedByDistance(platform.position.lat, platform.position.lng);
+  }, [platform, getSortedByDistance]);
 
-  // Handle target selection
   const toggleTarget = useCallback(
     (droneId: string) => {
-      actions.selectTarget(droneId);
+      setSelected(selectedDroneId === droneId ? null : droneId);
     },
-    [actions]
+    [selectedDroneId, setSelected]
   );
 
   return {
     drones,
-    selectedTargets,
+    selectedDroneId,
     getTargetableDrones,
     toggleTarget,
-    hasSelectedTargets: selectedTargets.size > 0,
+    hasSelectedTarget: selectedDroneId !== null,
   };
 };

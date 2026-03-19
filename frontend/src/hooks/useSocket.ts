@@ -7,28 +7,28 @@ const SOCKET_URL = 'http://localhost:3333';
 
 export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
-  const { actions } = useDroneStore();
 
   useEffect(() => {
     socketRef.current = io(SOCKET_URL);
     const socket = socketRef.current;
+    const updateDrone = useDroneStore.getState().updateDrone;
 
     socket.on('connect', () => {
       console.log('Connected to server');
     });
 
     socket.on('initialDroneData', (data: { drones: IDrone[] }) => {
-      data.drones.forEach((drone) => actions.addDrone(drone));
+      data.drones.forEach((drone) => updateDrone(drone));
     });
 
     socket.on('droneUpdate', (drone: IDrone) => {
-      actions.updateDrone(drone);
+      updateDrone(drone);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [actions]);
+  }, []);
 
   return socketRef.current;
 };

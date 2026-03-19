@@ -93,78 +93,77 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 **Depends on:** Step 1.
 **Output:** Engagement event handling in `socket-service.ts`, a new `TelemetryLog` Mongoose model, and a working `GET /api/drones/:droneId/history` route.
 
+**Phase 2 status:** 2.2 ✅ 2.3 ✅ 2.4 ✅ complete. 2.1 (engagement handler) pending. 2.5 acceptance criteria partially verifiable.
+
 ### 2.1 Engagement handler in `socket-service.ts`
 
-2.1.1. Inside the `socket.on('connection')` callback, register a listener for the `engagement:fire` event. The payload type is `EngagementFirePayload`.
+- [ ] 2.1.1. Inside the `socket.on('connection')` callback, register a listener for the `engagement:fire` event. The payload type is `EngagementFirePayload`.
 
-2.1.2. On receiving `engagement:fire`, look up the target drone by `droneId` in the active in-memory drone map. If the drone is not found or its status is not `Engagement Ready`, emit no event and return early.
+- [ ] 2.1.2. On receiving `engagement:fire`, look up the target drone by `droneId` in the active in-memory drone map. If the drone is not found or its status is not `Engagement Ready`, emit no event and return early.
 
-2.1.3. Calculate hit probability. The formula is: `baseProbability` of `0.85`, multiplied by `rangeFactor` which equals `1 minus (distanceMeters divided by 2000)` and degrades linearly to zero at maximum range, multiplied by `(1 minus (speedPenalty times 0.3))` where `speedPenalty` equals `drone.speed divided by 500`. Clamp the final value between 0 and 1.
+- [ ] 2.1.3. Calculate hit probability. The formula is: `baseProbability` of `0.85`, multiplied by `rangeFactor` which equals `1 minus (distanceMeters divided by 2000)` and degrades linearly to zero at maximum range, multiplied by `(1 minus (speedPenalty times 0.3))` where `speedPenalty` equals `drone.speed divided by 500`. Clamp the final value between 0 and 1.
 
-2.1.4. Roll `Math.random()`. If the result is less than or equal to the calculated hit probability, process a hit: set the drone's in-memory status to `Hit`, emit a `drone:hit` event to all connected clients with the `droneId` and timestamp, wait 300 milliseconds, then set status to `Destroyed`, emit `drone:destroyed`, decrement the platform's `ammoCount` by 3, increment `killCount` by 1, write a `TelemetryLog` document with `engagementOutcome` of `Destroyed`, and remove the drone from the active simulation map.
+- [ ] 2.1.4. Roll `Math.random()`. If the result is less than or equal to the calculated hit probability, process a hit: set the drone's in-memory status to `Hit`, emit a `drone:hit` event to all connected clients with the `droneId` and timestamp, wait 300 milliseconds, then set status to `Destroyed`, emit `drone:destroyed`, decrement the platform's `ammoCount` by 3, increment `killCount` by 1, write a `TelemetryLog` document with `engagementOutcome` of `Destroyed`, and remove the drone from the active simulation map.
 
-2.1.5. If the roll exceeds hit probability, process a miss: emit `drone:missed` to all clients with the `droneId`, `outcome` of `Missed`, and timestamp. Write a `TelemetryLog` document with `engagementOutcome` of `Missed`. The drone remains active and continues its approach.
+- [ ] 2.1.5. If the roll exceeds hit probability, process a miss: emit `drone:missed` to all clients with the `droneId`, `outcome` of `Missed`, and timestamp. Write a `TelemetryLog` document with `engagementOutcome` of `Missed`. The drone remains active and continues its approach.
 
-2.1.6. After every engagement resolution — hit or miss — emit a `platform:status` event to all clients with the updated `IWeaponPlatform` data.
+- [ ] 2.1.6. After every engagement resolution — hit or miss — emit a `platform:status` event to all clients with the updated `IWeaponPlatform` data.
 
-### 2.2 `TelemetryLog` Mongoose model
+### 2.2 `TelemetryLog` Mongoose model ✅
 
-2.2.1. Create `apps/backend/src/models/telemetry-log.model.ts`. Import `ITelemetryLog` from `@td3/shared-types`.
+- [x] 2.2.1. Create `apps/backend/src/models/telemetry-log.model.ts` (or `backend/src/models/telemetry-log.model.ts`). Import `ITelemetryLog` from `@td3/shared-types`.
 
-2.2.2. Define a Mongoose schema matching `ITelemetryLog` exactly: `timestamp` as a required string, `droneId` as a required string, `position` as a sub-document with `lat`, `lng`, and `altitude` as numbers, `status` as a required string, and `engagementOutcome` as a string that defaults to `null`.
+- [x] 2.2.2. Define a Mongoose schema matching `ITelemetryLog` exactly: `timestamp` as a required string, `droneId` as a required string, `position` as a sub-document with `lat`, `lng`, and `altitude` as numbers, `status` as a required string, and `engagementOutcome` as a string that defaults to `null`.
 
-2.2.3. Export the compiled model as `TelemetryLog`.
+- [x] 2.2.3. Export the compiled model as `TelemetryLog`.
 
-### 2.3 Engagement history REST route
+### 2.3 Engagement history REST route ✅
 
-2.3.1. In `apps/backend/src/routes/drone.routes.ts`, implement the handler for `GET /api/drones/:droneId/history`. It must query the `TelemetryLog` collection filtered by `droneId`, sorted by `timestamp` descending, limited to 50 records, and respond with the results as JSON.
+- [x] 2.3.1. In `apps/backend/src/routes/drone.routes.ts` (or `backend/src/routes/drone.routes.ts`), implement the handler for `GET /api/drones/:droneId/history`. It must query the `TelemetryLog` collection filtered by `droneId`, sorted by `timestamp` descending, limited to 50 records, and respond with the results as JSON.
 
-2.3.2. Add basic error handling — wrap the query in a try-catch and respond with HTTP 500 and a structured error body on failure.
+- [x] 2.3.2. Add basic error handling — wrap the query in a try-catch and respond with HTTP 500 and a structured error body on failure.
 
-### 2.4 Heartbeat handler
+### 2.4 Heartbeat handler ✅
 
-2.4.1. Inside the `socket.on('connection')` callback, register a listener for `heartbeat:ping`. On receipt, immediately emit `heartbeat:pong` back to the same socket. No payload is required in either direction.
+- [x] 2.4.1. Inside the `socket.on('connection')` callback, register a listener for `heartbeat:ping`. On receipt, immediately emit `heartbeat:pong` back to the same socket. No payload is required in either direction.
 
 ### 2.5 Acceptance criteria
 
-2.5.1. `POST /api/drones/test-types` spawns at least three active drones. Verify via `GET /api/drones`.
-
-2.5.2. Emit `engagement:fire` from a Socket.IO test client targeting one of the spawned drones. Confirm receipt of either `drone:hit` or `drone:missed` within 500 milliseconds.
-
-2.5.3. If `drone:hit` was received, confirm `drone:destroyed` follows within 350 milliseconds.
-
-2.5.4. `GET /api/drones/:droneId/history` returns an array with at least one entry whose `engagementOutcome` is either `Destroyed` or `Missed`.
-
-2.5.5. `GET /api/platform/status` returns a payload with `killCount` incremented by 1 and `ammoCount` decremented by 3 after a successful hit.
-
-2.5.6. Emitting `heartbeat:ping` causes the server to respond with `heartbeat:pong` on the same socket within 100 milliseconds.
+| ID | Criterion | Depends on | Status |
+|----|-----------|------------|--------|
+| 2.5.1 | `POST /api/drones/test-types` spawns at least three active drones. Verify via `GET /api/drones`. | Routes, createTestDrones | ☐ Verifiable now |
+| 2.5.2 | Emit `engagement:fire` from a Socket.IO test client targeting one of the spawned drones. Confirm receipt of either `drone:hit` or `drone:missed` within 500 ms. | Step 2.1 (engagement handler) | ☐ Blocked |
+| 2.5.3 | If `drone:hit` was received, confirm `drone:destroyed` follows within 350 ms. | Step 2.1 | ☐ Blocked |
+| 2.5.4 | `GET /api/drones/:droneId/history` returns an array with at least one entry whose `engagementOutcome` is either `Destroyed` or `Missed`. | Step 2.1 (TelemetryLog populated on engagement) | ☐ Blocked |
+| 2.5.5 | `GET /api/platform/status` returns a payload with `killCount` incremented by 1 and `ammoCount` decremented by 3 after a successful hit. | Step 2.1 | ☐ Blocked |
+| 2.5.6 | Emitting `heartbeat:ping` causes the server to respond with `heartbeat:pong` on the same socket within 100 ms. | Step 2.4 | ☐ Verifiable now |
 
 ---
 
 ## 3. Frontend — Zustand Stores
 
 **Depends on:** Step 1.
-**Output:** Five store files in `apps/frontend/src/store/`, each exporting a typed Zustand hook.
+**Output:** Five store files in `apps/frontend/src/store/` (or `frontend/src/store/`), each exporting a typed Zustand hook.
 
-### 3.1 Install dependencies
+### 3.1 Install dependencies ✅
 
-3.1.1. Install `zustand` and `immer` as production dependencies.
+- [x] 3.1.1. Install `zustand` and `immer` as production dependencies.
 
-### 3.2 `droneStore.ts`
+### 3.2 `droneStore.ts` ✅
 
-3.2.1. Create `apps/frontend/src/store/droneStore.ts`. The state shape is a `Map<string, IDrone>` keyed by `droneId`.
+- [x] 3.2.1. Create `apps/frontend/src/store/droneStore.ts` (or `frontend/src/store/droneStore.ts`). The state shape is a `Map<string, IDrone>` keyed by `droneId`.
 
-3.2.2. Apply Immer middleware so mutations to `state.drones` are written directly rather than via spread.
+- [x] 3.2.2. Apply Immer middleware so mutations to `state.drones` are written directly rather than via spread.
 
-3.2.3. Implement `updateDrone(drone: IDrone)` — sets or overwrites the entry at `drone.droneId` in the map.
+- [x] 3.2.3. Implement `updateDrone(drone: IDrone)` — sets or overwrites the entry at `drone.droneId` in the map.
 
-3.2.4. Implement `removeDrone(droneId: string)` — deletes the entry at the given key.
+- [x] 3.2.4. Implement `removeDrone(droneId: string)` — deletes the entry at the given key.
 
-3.2.5. Implement `clearDrones()` — clears the entire map.
+- [x] 3.2.5. Implement `clearDrones()` — clears the entire map.
 
-3.2.6. Implement `getSortedByDistance(platformLat: number, platformLng: number): IDrone[]` — filters the map to only drones with status `Confirmed` or `Engagement Ready`, converts to an array, and sorts ascending by Euclidean distance from the platform coordinates. Return the array.
+- [x] 3.2.6. Implement `getSortedByDistance(platformLat: number, platformLng: number): IDrone[]` — filters the map to only drones with status `Confirmed` or `Engagement Ready`, converts to an array, and sorts ascending by Euclidean distance from the platform coordinates. Return the array.
 
-3.2.7. **Critical pitfall:** Never iterate a `Map` directly in JSX. Always call `Array.from(state.drones.values())` before any `.filter()` or `.map()` call. This is the root cause of the known target-list rendering bug.
+- [x] 3.2.7. **Critical pitfall:** Never iterate a `Map` directly in JSX. Always call `Array.from(state.drones.values())` before any `.filter()` or `.map()` call. This is the root cause of the known target-list rendering bug.
 
 ### 3.3 `targetStore.ts`
 
@@ -1169,3 +1168,8 @@ td3/
 |------|---------|
 | 2026-03-18 | **Phase 1 Shared Types cleanup:** Created `libs/shared-types/` with all 15 canonical types from section 0.1. Added `@td3/shared-types` path alias to `tsconfig.base.json`, frontend `tsconfig.json`, and `vite.config.ts`. Updated backend `drone.model.ts` and `weapon-platform.model.ts` to import from shared-types; schema now mirrors `IDrone`/`IWeaponPlatform`. Updated frontend stores, hooks, and utils to use `@td3/shared-types`. Removed `frontend/src/types/` (local duplicate types). Marked Step 1 complete. |
 | 2026-03-18 | **Phase 2.1 Backend engagement cleanup:** Removed `handleDroneHit` and `POST /drones/:droneId/hit` route. Removed `engagementHistory`/`isEngaged` usage from socket-service and drone routes. Fixed `createTestDrones`: `FixedWing` (not `Fixed Wing`), `threatLevel` 0.0–1.0. Fixed `updateDrone`: threatLevel 0.0–1.0, removed engagementHistory push. Platform init now includes `ammoCount`/`killCount`. History route stubbed (returns `[]`) until TelemetryLog. Removed commented code from socket-service. |
+| 2026-03-18 | **Phase 2.2 TelemetryLog + model cleanup:** Created `backend/src/models/telemetry-log.model.ts` per 2.2.1–2.2.3. Wired `GET /api/drones/:droneId/history` to query TelemetryLog. Platform init route now includes `ammoCount`/`killCount`. Added checkbox format to Phase 2.1/2.2 in Implementation Plan. |
+| 2026-03-18 | **Phase 2.3 Routes and error handler cleanup:** Created `backend/src/lib/errorHandler.ts` with `sendError()` for structured error bodies. Removed `/routes-check`, `/drones/check`, and all commented code from drone.routes. Standardized all route handlers to use `sendError()`. Added DroneStatus validation for `PUT /drones/:droneId/status`. Reordered routes so `/drones/status` and `/drones/clear` precede `/drones/:droneId`. Cleaned main.ts: removed commented Socket.io block, fixed error middleware, ISO timestamp for health. |
+| 2026-03-18 | **Phase 2.4 Heartbeat handler:** Added `heartbeat:ping` listener in socket-service; on receipt emits `heartbeat:pong` to same socket. Removed nested disconnect listener bug from requestDroneUpdate. Removed commented CORS block. |
+| 2026-03-18 | **Phase 2.5 Acceptance criteria review:** Reformatted as table with dependency and status columns. 2.5.1 and 2.5.6 verifiable now; 2.5.2–2.5.5 blocked on Step 2.1 (engagement handler). |
+| 2026-03-18 | **Phase 2 + Phase 3.1–3.2:** Added Phase 2 status line. Phase 3.1 zustand/immer confirmed in package.json. Phase 3.2 droneStore: rewritten with Immer, Map<string,IDrone>, updateDrone, removeDrone, clearDrones, getSortedByDistance (uses calculateDistance, filters Confirmed/Engagement Ready). Created targetStore for selection. Updated useSocket (updateDrone), useDrones (targetStore, getSortedByDistance). |
