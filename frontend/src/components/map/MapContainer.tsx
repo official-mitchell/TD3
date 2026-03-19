@@ -129,6 +129,8 @@ const MapContent: React.FC = () => {
   ];
 
   const droneList = Array.from(drones.values());
+  const dyingDrones = useDroneStore((s) => s.dyingDrones);
+  const dyingDroneList = Array.from(dyingDrones.values());
   const selectedDrone = selectedDroneId ? drones.get(selectedDroneId) ?? null : null;
 
   return (
@@ -146,6 +148,15 @@ const MapContent: React.FC = () => {
           key={drone.droneId}
           drone={drone}
           isSelected={drone.droneId === selectedDroneId}
+          isDying={false}
+        />
+      ))}
+      {dyingDroneList.map((drone) => (
+        <DroneMarker
+          key={`dying-${drone.droneId}`}
+          drone={drone}
+          isSelected={false}
+          isDying={true}
         />
       ))}
     </>

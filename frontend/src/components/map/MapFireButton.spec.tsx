@@ -149,18 +149,40 @@ describe('MapFireButton', () => {
     const fireBtn = screen.getByRole('button', { name: /FIRE/ });
     fireEvent.click(fireBtn);
 
-    expect(screen.getByText('ENGAGING…')).toBeTruthy();
+    expect(screen.getByText('Firing')).toBeTruthy();
 
     act(() => {
       useTargetStore.setState({ selectedDroneId: 'D2' });
     });
 
-    expect(screen.queryByText('ENGAGING…')).toBeNull();
+    expect(screen.queryByText('Firing')).toBeNull();
     act(() => { vi.advanceTimersByTime(400); });
     expect(screen.getByText(/FIRE|NO TARGET|Adjusting Barrel Height/)).toBeTruthy();
   });
 
-  it('pressing FIRE emits engagement:fire and shows ENGAGING... until drone:destroyed', () => {
+  it('ENGAGING resets after 2 second burst if target not destroyed', () => {
+    vi.useFakeTimers();
+    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
+    useDroneStore.setState({
+      drones: new Map([
+        ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
+      ]),
+    });
+    useTargetStore.setState({ selectedDroneId: 'D1' });
+    render(<MapFireButton />);
+    act(() => { vi.advanceTimersByTime(400); });
+    const fireBtn = screen.getByRole('button', { name: /FIRE/ });
+    fireEvent.click(fireBtn);
+
+    expect(screen.getByText('Firing')).toBeTruthy();
+
+    act(() => { vi.advanceTimersByTime(2000); });
+
+    expect(screen.queryByText('Firing')).toBeNull();
+    expect(screen.getByText(/FIRE/)).toBeTruthy();
+  });
+
+  it('pressing FIRE emits engagement:fire and shows Firing until drone:destroyed', () => {
     vi.useFakeTimers();
     usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
     useDroneStore.setState({
@@ -175,7 +197,7 @@ describe('MapFireButton', () => {
     fireEvent.click(fireBtn);
 
     expect(mockEmit).toHaveBeenCalledWith('engagement:fire', expect.objectContaining({ droneId: 'D1' }));
-    expect(screen.getByText('ENGAGING…')).toBeTruthy();
+    expect(screen.getByText('Firing')).toBeTruthy();
 
     const onDestroyed = mockOn.mock.calls.find((c: unknown[]) => c[0] === 'drone:destroyed')?.[1] as (p: { droneId: string }) => void;
     expect(onDestroyed).toBeDefined();
@@ -183,6 +205,6 @@ describe('MapFireButton', () => {
       onDestroyed?.({ droneId: 'D1' });
     });
     expect(screen.getByText(/FIRE/)).toBeTruthy();
-    expect(screen.queryByText('ENGAGING…')).toBeNull();
+    expect(screen.queryByText('Firing')).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 /**
  * Header bar. Left: TD3 logo + title. Right: Create Targets, hamburger menu (settings), drawer toggles (mobile).
- * Settings menu: Change location, Refill ammo, weapon/drone size, sound volume.
+ * Create Targets: only targettable drones (Engagement Ready, in range). Settings: Create drones, Clear drones, etc.
  */
 import React, { useState } from 'react';
 import IconButton from '@mui/material/IconButton';
@@ -13,6 +13,8 @@ import { TD3Logo } from '@components/ui/TD3Logo';
 import { HamburgerButton } from '@components/ui/HamburgerButton';
 import { LocationPicker } from '@components/settings/LocationPicker';
 import { useUIStore } from '../../store/uiStore';
+import { useDroneStore } from '../../store/droneStore';
+import { useTargetStore } from '../../store/targetStore';
 
 const API_BASE = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3333';
 
@@ -68,16 +70,46 @@ export const Header: React.FC<HeaderProps> = ({
     setCreateLoading(true);
     setCreateError(null);
     try {
+      const res = await fetch(`${API_BASE}/api/drones/test-targets`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message ?? res.statusText);
+      }
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create targets');
+      console.error('Create targets failed:', err);
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const handleCreateDrones = async () => {
+    handleMenuClose();
+    setCreateLoading(true);
+    setCreateError(null);
+    try {
       const res = await fetch(`${API_BASE}/api/drones/test-types`, { method: 'POST' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message ?? res.statusText);
       }
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to create test drones');
-      console.error('Create targets failed:', err);
+      setCreateError(err instanceof Error ? err.message : 'Failed to create drones');
+      console.error('Create drones failed:', err);
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  const handleClearDrones = async () => {
+    handleMenuClose();
+    try {
+      const res = await fetch(`${API_BASE}/api/drones/clear`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to clear drones');
+      useDroneStore.getState().clearDrones();
+      useTargetStore.getState().setSelected(null);
+    } catch (err) {
+      console.error('Clear drones failed:', err);
     }
   };
 
@@ -102,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={handleCreateTargets}
           disabled={createLoading}
           className="px-3 py-1.5 bg-[#1E90FF] hover:bg-[#1a7de8] disabled:opacity-50 rounded text-xs font-mono font-medium text-white"
-          title="Spawn test drones for simulation"
+          title="Create targettable drones (Engagement Ready, in range) for testing"
         >
           {createLoading ? 'Creating…' : 'CREATE TARGETS'}
         </button>
@@ -161,6 +193,10 @@ export const Header: React.FC<HeaderProps> = ({
             Change location…
           </MenuItem>
           <MenuItem onClick={handleRefillAmmo}>Refill ammo</MenuItem>
+          <MenuItem onClick={handleCreateDrones} disabled={createLoading}>
+            Create drones
+          </MenuItem>
+          <MenuItem onClick={handleClearDrones}>Clear drones</MenuItem>
           <div className="px-4 py-2 border-t border-[#1A3A5C]">
             <div className="text-xs text-[#7B9BB5] mb-1">Weapon system size</div>
             <Slider

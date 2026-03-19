@@ -5,6 +5,7 @@
  * Migrates legacy drones (hitPoints missing or 1) to random 1–10 before creating new batch.
  * refillAmmo: sets ammo to 2000 and broadcasts platform:status.
  * handleEngagementFire: decrement ammo by 3 on BOTH hit and miss (fixes frontend reset bug).
+ * broadcastAllDrones: emits drones:replace to all clients after create/clear.
  */
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
@@ -174,11 +175,6 @@ export class SocketService {
     }
   }
 
-  // Add method to get platform position
-  private getPlatformPosition() {
-    return this.platform?.position || SocketService.RAS_LAFFAN;
-  }
-
   /** Public: update platform position and broadcast to all clients */
   updatePlatformPosition(position: { lat: number; lng: number }) {
     if (!this.platform) return;
@@ -209,16 +205,6 @@ export class SocketService {
   private async updateDrone(droneId: string) {
     try {
       const drone = (await Drone.findOne({ droneId })) as IDroneDocument;
-      if (drone && this.platform) {
-        const platformPos = this.getPlatformPosition();
-
-        // Calculate distance to platform
-        const distance = this.calculateDistance(drone.position, platformPos);
-        // Log distance for debugging
-        console.log(
-          `Drone ${droneId} is ${distance.toFixed(2)}m from platform`
-        );
-      }
 
       // Rest of the update logic
       if (drone) {
@@ -459,6 +445,18 @@ export class SocketService {
     this.io.emit('droneUpdate', droneData);
   }
 
+  /** Broadcast all drones to all connected clients (e.g. after create/clear). */
+  public async broadcastAllDrones() {
+    try {
+      const drones = await Drone.find({ status: { $nin: ['Hit', 'Destroyed'] } })
+        .sort({ lastUpdated: -1 })
+        .lean();
+      this.io.emit('drones:replace', { drones });
+    } catch (err) {
+      console.error('broadcastAllDrones error:', err);
+    }
+  }
+
   public stopSimulation() {
     if (this.simulationInterval) {
       clearInterval(this.simulationInterval);
@@ -579,6 +577,7 @@ export class SocketService {
         JSON.stringify(allDrones, null, 2)
       );
 
+      await this.broadcastAllDrones();
       return {
         message: 'Test drones created successfully',
         count: testDrones.length,
@@ -609,6 +608,37 @@ export class SocketService {
       lng,
       altitude: 100 + Math.random() * 400, // Random altitude between 100-500m
     };
+  }
+
+  /** Create only targettable drones (Engagement Ready, altitude ≤500m, within range) for testing. */
+  public async createTargettableDrones() {
+    if (!this.platform) {
+      throw new Error('Platform not initialized');
+    }
+    const randHP = () => Math.floor(Math.random() * 10) + 1;
+    const base = Date.now().toString(36).toUpperCase();
+    const types: Array<{ type: string; speed: number; threat: number }> = [
+      { type: 'Quadcopter', speed: 15, threat: 0.5 },
+      { type: 'Quadcopter', speed: 18, threat: 0.45 },
+      { type: 'FixedWing', speed: 100, threat: 0.6 },
+      { type: 'VTOL', speed: 50, threat: 0.55 },
+    ];
+    const drones = types.map((t, i) => ({
+      droneId: `TGT-${base}-${i + 1}`,
+      droneType: t.type as DroneType,
+      status: 'Engagement Ready' as const,
+      position: this.generateRandomPosition(this.platform!.position, 1500),
+      speed: t.speed,
+      heading: Math.random() * 360,
+      threatLevel: t.threat,
+      isFriendly: false,
+      hitPoints: randHP(),
+    }));
+    for (const d of drones) {
+      await new Drone(d).save();
+    }
+    await this.broadcastAllDrones();
+    return { message: 'Targettable drones created', count: drones.length };
   }
 
 }

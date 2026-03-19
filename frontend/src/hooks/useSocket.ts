@@ -1,6 +1,7 @@
 /**
  * WebSocket hook — Socket.IO connection, event routing to stores, heartbeat lifecycle.
  * Per Implementation Plan 4.2, 4.3. Step 14 saveTelemetry stubbed until offline storage exists.
+ * drones:replace: full replace of drone list (after create/clear), clears selection if needed.
  */
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
@@ -11,7 +12,7 @@ import { useConnectionStore } from '../store/connectionStore';
 import { useEngagementLogStore } from '../store/engagementLogStore';
 import type { IDrone, IWeaponPlatform, IEngagementRecord } from '@td3/shared-types';
 import { setSocketRef } from '../lib/socketRef';
-import { playHitSound } from '../lib/sounds';
+import { playHitSound, playRichochetSounds } from '../lib/sounds';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3333';
 
@@ -80,6 +81,16 @@ export const useSocket = () => {
       data.drones.forEach((drone) => droneStore.updateDrone(drone));
     });
 
+    socket.on('drones:replace', (data: { drones: IDrone[] }) => {
+      droneStore.clearDrones();
+      data.drones.forEach((drone) => droneStore.updateDrone(drone));
+      const selectedId = useTargetStore.getState().selectedDroneId;
+      const ids = new Set(data.drones.map((d) => d.droneId));
+      if (selectedId && !ids.has(selectedId)) {
+        useTargetStore.getState().setSelected(null);
+      }
+    });
+
     socket.on('droneUpdate', (payload: IDrone) => {
       droneStore.updateDrone(payload);
       // TODO Step 14: saveTelemetry(payload) when offline storage exists
@@ -96,18 +107,39 @@ export const useSocket = () => {
 
     socket.on('drone:destroyed', (payload: { droneId: string }) => {
       playHitSound();
+      playRichochetSounds();
+      const drone = droneStore.drones.get(payload.droneId);
+      if (drone) {
+        engagementLogStore.appendLog({
+          droneId: payload.droneId,
+          droneType: drone.droneType,
+          timestamp: new Date().toISOString(),
+          outcome: 'Destroyed',
+          distanceAtEngagement: 0,
+          hitPointsRemaining: 0,
+        });
+        droneStore.addDyingDrone(drone);
+      }
       droneStore.removeDrone(payload.droneId);
-      const platform = platformStore.platform;
-      const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
-      const sortedIds = useDroneStore
-        .getState()
-        .getEngageableTargets(center.lat, center.lng)
-        .map((d) => d.droneId);
-      useTargetStore.getState().nextTarget(sortedIds);
+      const selectedId = useTargetStore.getState().selectedDroneId;
+      if (selectedId === payload.droneId) {
+        const platform = platformStore.platform;
+        const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
+        const sortedIds = useDroneStore
+          .getState()
+          .getEngageableTargets(center.lat, center.lng)
+          .map((d) => d.droneId);
+        if (sortedIds.length === 0) {
+          useTargetStore.getState().setSelected(null);
+        } else {
+          useTargetStore.getState().nextTarget(sortedIds);
+        }
+      }
     });
 
-    socket.on('drone:hit', (payload: { droneId: string; timestamp?: string }) => {
+    socket.on('drone:hit', (payload: { droneId: string; timestamp?: string; hitPointsRemaining?: number }) => {
       playHitSound();
+      playRichochetSounds();
       const drone = droneStore.drones.get(payload.droneId);
       const record: IEngagementRecord = {
         droneId: payload.droneId,
@@ -115,6 +147,7 @@ export const useSocket = () => {
         timestamp: payload.timestamp ?? new Date().toISOString(),
         outcome: 'Hit',
         distanceAtEngagement: 0,
+        hitPointsRemaining: payload.hitPointsRemaining,
       };
       engagementLogStore.appendLog(record);
     });

@@ -3,6 +3,7 @@
  * Phase 3.2: Immer middleware, updateDrone, removeDrone, clearDrones, getSortedByDistance.
  * Per Implementation Plan 3.2. enableMapSet() required for Immer Map support.
  * getEngageableTargets: Engagement Ready only, altitude <= 500m, not friendly, sorted by threat descending.
+ * dyingDrones: drones just destroyed, shown with skull + float animation for 3s.
  */
 import { enableMapSet } from 'immer';
 import { create } from 'zustand';
@@ -14,10 +15,15 @@ import type { IDrone } from '@td3/shared-types';
 import { calculateDistance } from '../utils/calculations';
 import { PLATFORM_CONSTANTS } from '../utils/constants';
 
+const DYING_DRONE_DURATION_MS = 3000;
+
 interface DroneState {
   drones: Map<string, IDrone>;
+  dyingDrones: Map<string, IDrone>;
   updateDrone: (drone: IDrone) => void;
   removeDrone: (droneId: string) => void;
+  addDyingDrone: (drone: IDrone) => void;
+  removeDyingDrone: (droneId: string) => void;
   clearDrones: () => void;
   getSortedByDistance: (platformLat: number, platformLng: number) => IDrone[];
   getEngageableTargets: (platformLat: number, platformLng: number) => IDrone[];
@@ -29,6 +35,7 @@ export const useDroneStore = create<DroneState>()(
   devtools(
     immer((set, get) => ({
       drones: new Map(),
+      dyingDrones: new Map(),
 
       updateDrone: (drone) =>
         set((state) => {
@@ -40,9 +47,23 @@ export const useDroneStore = create<DroneState>()(
           state.drones.delete(droneId);
         }),
 
+      addDyingDrone: (drone) =>
+        set((state) => {
+          state.dyingDrones.set(drone.droneId, drone);
+          setTimeout(() => {
+            get().removeDyingDrone(drone.droneId);
+          }, DYING_DRONE_DURATION_MS);
+        }),
+
+      removeDyingDrone: (droneId) =>
+        set((state) => {
+          state.dyingDrones.delete(droneId);
+        }),
+
       clearDrones: () =>
         set((state) => {
           state.drones.clear();
+          state.dyingDrones.clear();
         }),
 
       getSortedByDistance: (platformLat, platformLng) => {

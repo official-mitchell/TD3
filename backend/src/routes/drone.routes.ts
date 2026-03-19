@@ -1,6 +1,7 @@
 /**
  * Drone and platform REST routes. Phase 2.3: cleaned routes, standardized error handlers.
  * PUT /platform/refill: refills ammo to 2000.
+ * GET /drones/kills/verify: returns destroyed drones + platform killCount for verification.
  */
 import { Router, Request, Response } from 'express';
 import Drone from '../models/drone.model';
@@ -34,6 +35,20 @@ router.post('/drones/test-types', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/drones/test-targets', async (req: Request, res: Response) => {
+  try {
+    const socketService = req.app.get('socketService');
+    if (!socketService) {
+      return sendError(res, 500, 'Socket service not found');
+    }
+    const result = await socketService.createTargettableDrones();
+    return res.json(result);
+  } catch (error) {
+    console.error('Error in test-targets endpoint:', error);
+    return sendError(res, 500, 'Error creating targettable drones', error);
+  }
+});
+
 router.get('/drones', async (req: Request, res: Response) => {
   try {
     const drones = await Drone.find().sort({ lastUpdated: -1 });
@@ -55,9 +70,29 @@ router.get('/drones/status', async (req: Request, res: Response) => {
   }
 });
 
+/** Verify drone kills: destroyed drones + platform killCount */
+router.get('/drones/kills/verify', async (req: Request, res: Response) => {
+  try {
+    const destroyed = await Drone.find({ status: 'Destroyed' }).lean();
+    const platform = await WeaponPlatform.findOne({ isActive: true }).lean();
+    return res.json({
+      destroyedCount: destroyed.length,
+      destroyedDrones: destroyed.map((d) => ({ droneId: d.droneId, status: d.status })),
+      platformKillCount: platform?.killCount ?? null,
+      platformActive: !!platform,
+    });
+  } catch (error) {
+    return sendError(res, 500, 'Error verifying kills', error);
+  }
+});
+
 router.post('/drones/clear', async (req: Request, res: Response) => {
   try {
     await Drone.deleteMany({});
+    const socketService = req.app.get('socketService');
+    if (socketService?.broadcastAllDrones) {
+      await socketService.broadcastAllDrones();
+    }
     return res.json({ message: 'All drones cleared' });
   } catch (error) {
     return sendError(res, 500, 'Error clearing drones', error);
@@ -228,3 +263,7 @@ router.get('/platform/test', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+/* --- Changelog ---
+ * 2025-03-19: POST /drones/clear now calls broadcastAllDrones so clients see empty list without refresh.
+ */

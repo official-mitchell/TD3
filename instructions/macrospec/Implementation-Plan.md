@@ -706,15 +706,15 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 - [x] slow down swivels so it takes a little bit of time to reposition
 - [x] show distance between the turret and the drone as a stat on the line between vehicle and the drone
 - [x] allow me to click off the drone to deselect that target.
-- [ ] tether sounds to animation
-- [ ] rotate turret image by 15 degrees clockwise so turret barrel aligns with heading
+- [x] tether sounds to animation
+- [x] rotate turret image by 15 degrees clockwise so turret barrel aligns with heading
 - [ ] create tracer rounds that match the amount count when they hit the drones ensure that they fade out after they fire; start as white-red bullets to imitate fire then fade them out
-- [ ] animate the turret a subtle opposite heading x/y translation to mimic recoil, should reset after firing
+- [x] animate the turret a subtle opposite heading x/y translation to mimic recoil, should reset after firing
 - [ ] create animation for landing hits and missed shots (show the rounds missing the target) and create little X's when they miss (assume they land behind the drone in some way)
 - [ ] create a range accuracy gradient cone away from the vehicle
 - [ ] generate FRIENDLIES on the screen — representing radar equipment, personnel, command posts, HQs, vehicles, aircraft, and ships. Generate friendlies inside, outside, and far outside the turret. Persist the allies in a database. When I click on them allow me to see their status.
-- [ ] remove the engagement log from the bottom bar, so the bottom bar's height shrinks. Ensure the Engagement Log in the right side bar is organized from most recent first in descending order
-- [ ] when new engagement logs come in have them animate in by fading from poping in even as they get layered.
+- [x] remove the engagement log from the bottom bar, so the bottom bar's height shrinks. Ensure the Engagement Log in the right side bar is organized from most recent first in descending order
+- [x] when new engagement logs come in have them animate in by fading from poping in even as they get layered.
 
 
 ---
@@ -1254,3 +1254,4 @@ td3/
 | 2026-03-19 | **MapFireButton ENGAGING reset on target change:** Added useEffect so when selectedDroneId changes to a different drone than the one being fired at, firing state resets (no longer stuck). MapFireButton.spec: "ENGAGING resets when user changes target (not stuck)" — fire at D1, switch to D2, expect ENGAGING to clear. |
 | 2026-03-19 | **Priority targets: engageable only, sorted by threat:** droneStore.getEngageableTargets: Engagement Ready only, altitude ≤ 500m, not friendly, sorted by threat descending. PriorityTargetList, TargetPanel, BottomBar, MapFireButton, useSocket, useDrones now use getEngageableTargets for target list and PREV/NEXT. TargetPanel.spec: 9.3.1 (engageable only), 9.3.2 (sorted by threat). |
 | 2026-03-19 | **Ammo/HP engagement overhaul:** Hit probability reduced 85% (×0.15). Drones have hitPoints (1–10 random). Multi-hit: each hit decrements HP; drone:destroyed only when HP=0. IDrone + Drone schema + createTestDrones + test route: hitPoints. TelemetryOverlay + PriorityTargetList: show HP. 200 rounds/min unchanged. |
+| 2026-03-19 | **Implementation Plan 709–716 (partial):** (709) Tether sounds: fire sound on recoil start; ricochets on drone:hit/drone:destroyed. (710) Turret image +15° clockwise for barrel alignment. (712) Turret recoil: opposite-heading x/y translate on fire, reset after 180ms. (715) BottomBar: removed engagement log (right sidebar only), height shrunk. (716) LogPanel: most recent first (store prepends), new entries animate in (fade+pop). |

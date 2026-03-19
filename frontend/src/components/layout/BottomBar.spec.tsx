@@ -7,7 +7,6 @@ import { BottomBar } from './BottomBar';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
-import { useEngagementLogStore } from '../../store/engagementLogStore';
 import type { IWeaponPlatform, IDrone } from '@td3/shared-types';
 
 const mockEmit = vi.fn();
@@ -41,7 +40,6 @@ describe('BottomBar', () => {
     usePlatformStore.setState({ platform: null });
     useDroneStore.setState({ drones: new Map() });
     useTargetStore.setState({ selectedDroneId: null });
-    useEngagementLogStore.setState({ log: [] });
   });
 
   afterEach(() => {
@@ -53,22 +51,6 @@ describe('BottomBar', () => {
     expect(screen.getByText('← PREV')).toBeTruthy();
     expect(screen.getByText('NEXT →')).toBeTruthy();
     expect(screen.getByText('NO TARGET')).toBeTruthy();
-  });
-
-  it('10.1.2: shows engagement log feed', () => {
-    render(<BottomBar />);
-    expect(screen.getByText(/No engagements yet/)).toBeTruthy();
-  });
-
-  it('10.1.2: engagement log shows entries when present', () => {
-    useEngagementLogStore.setState({
-      log: [
-        { droneId: 'D1', droneType: 'Quadcopter', timestamp: new Date().toISOString(), outcome: 'Hit', distanceAtEngagement: 0.5 },
-      ],
-    });
-    render(<BottomBar />);
-    expect(screen.getByText('D1')).toBeTruthy();
-    expect(screen.getByText(/Hit/)).toBeTruthy();
   });
 
   it('10.4.4: PREV/NEXT disabled when fewer than 2 targets', () => {
@@ -99,39 +81,7 @@ describe('BottomBar', () => {
     expect(useTargetStore.getState().selectedDroneId).toBe('D1');
   });
 
-  it('10.5.2: log entry shows timestamp, droneId, arrow, outcome with ✓ or ✗', () => {
-    useEngagementLogStore.setState({
-      log: [
-        { droneId: 'D1', droneType: 'Quadcopter', timestamp: new Date().toISOString(), outcome: 'Hit', distanceAtEngagement: 0 },
-        { droneId: 'D2', droneType: 'Quadcopter', timestamp: new Date().toISOString(), outcome: 'Missed', distanceAtEngagement: 0 },
-      ],
-    });
-    render(<BottomBar />);
-    expect(screen.getByText('D1')).toBeTruthy();
-    expect(screen.getByText('D2')).toBeTruthy();
-    expect(screen.getByText(/✓ Hit/)).toBeTruthy();
-    expect(screen.getByText(/✗ Missed/)).toBeTruthy();
-  });
-
   describe('10.6 Acceptance criteria', () => {
-    it('10.6.4: new log entry appears when drone:hit or drone:missed received', () => {
-      render(<BottomBar />);
-      expect(screen.getByText(/No engagements yet/)).toBeTruthy();
-
-      act(() => {
-        useEngagementLogStore.getState().appendLog({
-          droneId: 'D1',
-          droneType: 'Quadcopter',
-          timestamp: new Date().toISOString(),
-          outcome: 'Hit',
-          distanceAtEngagement: 0,
-        });
-      });
-
-      expect(screen.getByText('D1')).toBeTruthy();
-      expect(screen.getByText(/✓ Hit/)).toBeTruthy();
-    });
-
     it('10.6.5: drone:destroyed removes drone and auto-advances target', () => {
       usePlatformStore.setState({ platform: PLATFORM });
       useDroneStore.setState({

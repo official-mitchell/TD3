@@ -58,6 +58,8 @@ export interface IEngagementRecord {
   timestamp: string;
   outcome: 'Hit' | 'Missed' | 'Destroyed';
   distanceAtEngagement: number;
+  /** Remaining HP after this hit (hits only) */
+  hitPointsRemaining?: number;
 }
 
 // --- Socket.IO payload interfaces ---
