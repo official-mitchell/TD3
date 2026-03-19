@@ -1,55 +1,50 @@
-import React, { useState } from 'react';
-
-interface Target {
-  id: string;
-  type: 'Quadcopter' | 'Fixed Wing' | 'VTOL';
-  modelId: string;
-  distance: number;
-  threatLevel: number; // 1-5 for star rating
-  selected?: boolean;
-}
+/**
+ * Priority target panel. Uses droneStore, platformStore, targetStore.
+ * Shows Confirmed/Engagement Ready drones; FIRE emits engagement:fire via socket.
+ */
+import React, { useState, useMemo } from 'react';
+import { useDroneStore } from '../../store/droneStore';
+import { usePlatformStore } from '../../store/platformStore';
+import { useTargetStore } from '../../store/targetStore';
+import { getSocket } from '../../lib/socketRef';
+import { calculateDistance } from '../../utils/calculations';
+import type { IDrone } from '@td3/shared-types';
 
 const TargetCard: React.FC<{
-  target: Target;
+  drone: IDrone;
   index: number;
   selected: boolean;
   onSelect: () => void;
-}> = ({ target, index, selected, onSelect }) => {
+}> = ({ drone, index, selected, onSelect }) => {
+  const platform = usePlatformStore((s) => s.platform);
+  const center = platform?.position ?? { lat: 37.7749, lng: -122.4194 };
+  const distKm = calculateDistance(center, drone.position) / 1000;
+  const threatStars = Math.min(5, Math.ceil(drone.threatLevel * 5));
+
   return (
     <div
       onClick={onSelect}
       className={`
         p-4 rounded-lg cursor-pointer transition-all
-        ${
-          selected
-            ? 'bg-slate-700 border-l-4 border-blue-500'
-            : 'bg-slate-800 hover:bg-slate-700'
-        }
+        ${selected ? 'bg-slate-700 border-l-4 border-blue-500' : 'bg-slate-800 hover:bg-slate-700'}
       `}
     >
       <div className="flex items-center gap-3">
         <span className="text-lg font-bold text-blue-400">{index + 1}</span>
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <span className="font-medium">{target.modelId}</span>
-            <div className="flex">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium truncate">{drone.droneId}</span>
+            <div className="flex flex-shrink-0">
               {[...Array(5)].map((_, i) => (
-                <span
-                  key={i}
-                  className={`text-sm ${
-                    i < target.threatLevel
-                      ? 'text-yellow-400'
-                      : 'text-slate-600'
-                  }`}
-                >
+                <span key={i} className={`text-sm ${i < threatStars ? 'text-yellow-400' : 'text-slate-600'}`}>
                   ★
                 </span>
               ))}
             </div>
           </div>
-          <div className="text-sm text-slate-400">{target.type}</div>
+          <div className="text-sm text-slate-400">{drone.droneType}</div>
           <div className="text-sm text-slate-500 mt-1">
-            DISTANCE AWAY: {target.distance.toFixed(2)}km
+            {drone.status} • {distKm.toFixed(2)}km
           </div>
         </div>
       </div>
@@ -58,57 +53,28 @@ const TargetCard: React.FC<{
 };
 
 export const PriorityTargetPanel: React.FC = () => {
-  // This would eventually come from a store
-  const [targets] = useState<Target[]>([
-    {
-      id: '1',
-      type: 'Quadcopter',
-      modelId: 'QUAD-001',
-      distance: 0.91,
-      threatLevel: 3,
-    },
-    {
-      id: '2',
-      type: 'Quadcopter',
-      modelId: 'QUAD-002',
-      distance: 0.91,
-      threatLevel: 4,
-    },
-    {
-      id: '3',
-      type: 'Quadcopter',
-      modelId: 'QUAD-003',
-      distance: 0.91,
-      threatLevel: 2,
-    },
-    {
-      id: '4',
-      type: 'Quadcopter',
-      modelId: 'QUAD-004',
-      distance: 0.91,
-      threatLevel: 5,
-    },
-    {
-      id: '5',
-      type: 'Quadcopter',
-      modelId: 'QUAD-005',
-      distance: 0.91,
-      threatLevel: 3,
-    },
-  ]);
+  const drones = useDroneStore((s) => s.drones);
+  const platform = usePlatformStore((s) => s.platform);
+  const selectedDroneId = useTargetStore((s) => s.selectedDroneId);
+  const setSelected = useTargetStore((s) => s.setSelected);
+  const [firing, setFiring] = useState(false);
 
-  const [selectedTargets, setSelectedTargets] = useState<Set<string>>(
-    new Set()
+  const center = platform?.position ?? { lat: 37.7749, lng: -122.4194 };
+  const targets = useMemo(
+    () => useDroneStore.getState().getSortedByDistance(center.lat, center.lng),
+    [drones, platform]
   );
+  const canFire = selectedDroneId && targets.some((d) => d.droneId === selectedDroneId);
+  const selectedDrone = selectedDroneId ? drones.get(selectedDroneId) : null;
+  const isEngagementReady = selectedDrone?.status === 'Engagement Ready';
 
-  const toggleTarget = (targetId: string) => {
-    const newSelected = new Set(selectedTargets);
-    if (newSelected.has(targetId)) {
-      newSelected.delete(targetId);
-    } else {
-      newSelected.add(targetId);
-    }
-    setSelectedTargets(newSelected);
+  const handleFire = async () => {
+    if (!selectedDroneId || !isEngagementReady || firing) return;
+    const socket = getSocket();
+    if (!socket) return;
+    setFiring(true);
+    socket.emit('engagement:fire', { droneId: selectedDroneId, timestamp: new Date().toISOString() });
+    setTimeout(() => setFiring(false), 500);
   };
 
   return (
@@ -116,27 +82,32 @@ export const PriorityTargetPanel: React.FC = () => {
       <div className="mb-4">
         <h2 className="text-lg font-bold">Priority Targets</h2>
         <p className="text-sm text-slate-400">
-          Click the card to select multiple
+          Select a target; FIRE when Engagement Ready
         </p>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto">
-        {targets.map((target, index) => (
-          <TargetCard
-            key={target.id}
-            target={target}
-            index={index}
-            selected={selectedTargets.has(target.id)}
-            onSelect={() => toggleTarget(target.id)}
-          />
-        ))}
+      <div className="flex-1 space-y-2 overflow-y-auto min-w-0">
+        {targets.length === 0 ? (
+          <p className="text-sm text-slate-500">No targets (Confirmed or Engagement Ready)</p>
+        ) : (
+          targets.map((drone, index) => (
+            <TargetCard
+              key={drone.droneId}
+              drone={drone}
+              index={index}
+              selected={selectedDroneId === drone.droneId}
+              onSelect={() => setSelected(selectedDroneId === drone.droneId ? null : drone.droneId)}
+            />
+          ))
+        )}
       </div>
 
       <button
-        className="w-full mt-4 px-4 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
-        disabled={selectedTargets.size === 0}
+        onClick={handleFire}
+        disabled={!canFire || !isEngagementReady || firing}
+        className="w-full mt-4 px-4 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
       >
-        FIRE ({selectedTargets.size})
+        {firing ? 'FIRING…' : isEngagementReady ? 'FIRE' : 'FIRE (select Engagement Ready)'}
       </button>
     </div>
   );

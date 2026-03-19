@@ -1,9 +1,10 @@
 /**
  * Drone Mongoose model. Uses shared types from @td3/shared-types.
  * Schema mirrors IDrone exactly per Implementation Plan Step 1.3.1.
+ * Import only IDrone; DroneType/DroneStatus re-exported from shared-types.
  */
 import mongoose, { Schema, Document } from 'mongoose';
-import type { DroneType, DroneStatus, IDrone } from '@td3/shared-types';
+import type { IDrone } from '@td3/shared-types';
 
 export interface IDroneDocument extends Omit<IDrone, 'lastUpdated'>, Document {
   lastUpdated: Date;

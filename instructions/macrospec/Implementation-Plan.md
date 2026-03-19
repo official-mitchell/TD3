@@ -316,60 +316,60 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 **Depends on:** Step 5.
 **Output:** `apps/frontend/src/views/DashboardView.tsx` and four stub layout components with no internal logic yet.
 
-### 6.1 Layout grid
+### 6.1 Layout grid ✅
 
-6.1.1. Create `apps/frontend/src/views/DashboardView.tsx`. The root element is a full-viewport flex column (`height: 100vh`, `overflow: hidden`).
+- [x] 6.1.1. Create `apps/frontend/src/views/DashboardView.tsx`. The root element is a full-viewport flex column (`height: 100vh`, `overflow: hidden`).
 
-6.1.2. The header row is a fixed-height bar across the full width.
+- [x] 6.1.2. The header row is a fixed-height bar across the full width.
 
-6.1.3. Below the header is a flex row that fills the remaining height. It contains three zones: a left sidebar of `280px` fixed width, a center zone that fills the remaining width with `flex: 1`, and a right sidebar of `320px` fixed width.
+- [x] 6.1.3. Below the header is a flex row that fills the remaining height. It contains three zones: a left sidebar of `280px` fixed width, a center zone that fills the remaining width with `flex: 1`, and a right sidebar of `320px` fixed width.
 
-6.1.4. Below the three-zone row is a bottom bar of fixed height.
+- [x] 6.1.4. Below the three-zone row is a bottom bar of fixed height.
 
-6.1.5. Left and right sidebars have `overflow-y: auto` so they scroll independently of the map.
+- [x] 6.1.5. Left and right sidebars have `overflow-y: auto` so they scroll independently of the map.
 
-6.1.6. Borders between zones use `1px solid #1A3A5C`.
+- [x] 6.1.6. Borders between zones use `1px solid #1A3A5C`.
 
-### 6.2 Stub components
+### 6.2 Stub components ✅
 
-6.2.1. Create `apps/frontend/src/components/layout/Header.tsx` — renders a placeholder bar with the text `TD3`.
+- [x] 6.2.1. Create `apps/frontend/src/components/layout/Header.tsx` — renders Navbar (layout cleanup).
 
-6.2.2. Create `apps/frontend/src/components/panels/StatusPanel.tsx` — renders a placeholder box labeled `STATUS PANEL`.
+- [x] 6.2.2. Create `apps/frontend/src/components/panels/StatusPanel.tsx` — contains StatusCards + LogPanel.
 
-6.2.3. Create `apps/frontend/src/components/map/MapContainer.tsx` — renders a placeholder div with `height: 100%`, `width: 100%`, and a visible background color to confirm the zone occupies the correct space.
+- [x] 6.2.3. Create `apps/frontend/src/components/map/MapContainer.tsx` — placeholder with RadarDisplay (Phase 7 will replace with Leaflet).
 
-6.2.4. Create `apps/frontend/src/components/panels/TargetPanel.tsx` — renders a placeholder box labeled `TARGET PANEL`.
+- [x] 6.2.4. Create `apps/frontend/src/components/panels/TargetPanel.tsx` — contains PriorityTargetPanel.
 
-6.2.5. Create `apps/frontend/src/components/layout/BottomBar.tsx` — renders a placeholder bar labeled `BOTTOM BAR`.
+- [x] 6.2.5. Create `apps/frontend/src/components/layout/BottomBar.tsx` — placeholder bar labeled `BOTTOM BAR`.
 
-### 6.3 Responsive behavior
+### 6.3 Responsive behavior ✅
 
-6.3.1. Use MUI `useMediaQuery` with a `768px` breakpoint. When the viewport is narrower than 768px, both the left and right sidebars must be hidden from the inline layout and instead made accessible as MUI `Drawer` components. Add icon buttons to the header to toggle each drawer.
+- [x] 6.3.1. Use MUI `useMediaQuery` with a `768px` breakpoint. When the viewport is narrower than 768px, both the left and right sidebars are hidden from the inline layout and instead made accessible as MUI `Drawer` components. Add icon buttons to the header to toggle each drawer.
 
-### 6.4 Acceptance criteria
+### 6.4 Acceptance criteria ✅
 
-6.4.1. The layout renders with all five zones visible on a desktop viewport without horizontal scrolling.
+- [x] 6.4.1. The layout renders with all five zones visible on a desktop viewport without horizontal scrolling.
 
-6.4.2. At 768px viewport width, the left and right sidebars are hidden and replaced by drawer toggle icons in the header. Clicking each icon opens the corresponding drawer.
+- [x] 6.4.2. At 768px viewport width, the left and right sidebars are hidden and replaced by drawer toggle icons in the header. Clicking each icon opens the corresponding drawer.
 
-6.4.3. The center zone fills all remaining horizontal space between the sidebars.
+- [x] 6.4.3. The center zone fills all remaining horizontal space between the sidebars.
 
 ---
 
-## 7. Frontend — Leaflet Map Component
+## 7. Frontend — Leaflet Map Component ✅
 
 **Depends on:** Steps 3, 4, and 5.
 **Output:** A fully functional interactive map at `apps/frontend/src/components/map/` displaying the weapon platform, drone markers, range circles, and line of fire.
 
-### 7.1 Install dependencies
+### 7.1 Install dependencies ✅
 
-7.1.1. Install `leaflet`, `react-leaflet` as production dependencies and `@types/leaflet` as a dev dependency.
+- [x] 7.1.1. Install `leaflet`, `react-leaflet` as production dependencies and `@types/leaflet` as a dev dependency.
 
-7.1.2. **Known Vite pitfall:** Leaflet's default marker icons reference a `node_modules` path that Vite's asset pipeline cannot resolve, causing 404 errors for the marker PNG files. Fix this by calling `delete (L.Icon.Default.prototype as any)._getIconUrl` and then calling `L.Icon.Default.mergeOptions` with explicit `new URL(...)` references using `import.meta.url` for the three icon files: `marker-icon.png`, `marker-icon-2x.png`, and `marker-shadow.png`. Apply this fix once at the top of `MapContainer.tsx`.
+- [x] 7.1.2. **Known Vite pitfall:** Leaflet's default marker icons reference a `node_modules` path that Vite's asset pipeline cannot resolve, causing 404 errors for the marker PNG files. Fix this by calling `delete (L.Icon.Default.prototype as any)._getIconUrl` and then calling `L.Icon.Default.mergeOptions` with explicit `new URL(...)` references using `import.meta.url` for the three icon files: `marker-icon.png`, `marker-icon-2x.png`, and `marker-shadow.png`. Apply this fix once at the top of `MapContainer.tsx`.
 
-### 7.2 File structure
+### 7.2 File structure ✅
 
-7.2.1. Create the following files under `apps/frontend/src/components/map/`:
+- [x] 7.2.1. Create the following files under `apps/frontend/src/components/map/`:
   - `MapContainer.tsx` — root map component
   - `PlatformMarker.tsx` — XM914E1 weapon platform icon with heading arrow
   - `DroneMarker.tsx` — per-drone icon, color by status, rotates to heading
@@ -377,65 +377,65 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
   - `LineOfFire.tsx` — SVG polyline from platform to selected target
   - `TargetLockRing.tsx` — pulsing animation ring on the locked target
 
-### 7.3 `MapContainer.tsx`
+### 7.3 `MapContainer.tsx` ✅
 
-7.3.1. Read `platform` from `usePlatformStore`. Read all drone values as an array from `useDroneStore`. Read `selectedDroneId` from `useTargetStore`.
+- [x] 7.3.1. Read `platform` from `usePlatformStore`. Read all drone values as an array from `useDroneStore`. Read `selectedDroneId` from `useTargetStore`.
 
-7.3.2. Default map center is `[37.7749, -122.4194]` (San Francisco — matches seed data). Default zoom is `14`. When `platform` is available, derive the center from `platform.position.lat` and `platform.position.lng`.
+- [x] 7.3.2. Default map center is `[37.7749, -122.4194]` (San Francisco — matches seed data). Default zoom is `14`. When `platform` is available, derive the center from `platform.position.lat` and `platform.position.lng`.
 
-7.3.3. Use CartoDB dark tile layer at `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`. This tile style matches the dark military theme and is free for public projects.
+- [x] 7.3.3. Use CartoDB dark tile layer at `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`. This tile style matches the dark military theme and is free for public projects.
 
-7.3.4. Render `RangeCircles` and `PlatformMarker` only when `platform` is non-null.
+- [x] 7.3.4. Render `RangeCircles` and `PlatformMarker` only when `platform` is non-null.
 
-7.3.5. Render `LineOfFire` when both `platform` is non-null and a drone matching `selectedDroneId` exists in the store.
+- [x] 7.3.5. Render `LineOfFire` when both `platform` is non-null and a drone matching `selectedDroneId` exists in the store.
 
-7.3.6. Render a `DroneMarker` for each drone in the store, passing `isSelected: true` for the drone whose `droneId` matches `selectedDroneId`.
+- [x] 7.3.6. Render a `DroneMarker` for each drone in the store, passing `isSelected: true` for the drone whose `droneId` matches `selectedDroneId`.
 
-### 7.4 `DroneMarker.tsx`
+### 7.4 `DroneMarker.tsx` ✅
 
-7.4.1. Use a `L.divIcon` containing an inline SVG arrow rotated to `drone.heading` degrees using a CSS `transform: rotate(${drone.heading}deg)` style.
+- [x] 7.4.1. Use a `L.divIcon` containing an inline SVG arrow rotated to `drone.heading` degrees using a CSS `transform: rotate(${drone.heading}deg)` style.
 
-7.4.2. The SVG fill color must reflect `drone.status`: `#6B7280` for `Detected`, `#EAB308` for `Identified`, `#F97316` for `Confirmed`, `#EF4444` for `Engagement Ready`, `#374151` for `Hit` or `Destroyed`.
+- [x] 7.4.2. The SVG fill color must reflect `drone.status`: `#6B7280` for `Detected`, `#EAB308` for `Identified`, `#F97316` for `Confirmed`, `#EF4444` for `Engagement Ready`, `#374151` for `Hit` or `Destroyed`.
 
-7.4.3. When `isSelected` is true, apply the `TargetLockRing` overlay at the drone's position.
+- [x] 7.4.3. When `isSelected` is true, apply the `TargetLockRing` overlay at the drone's position.
 
-7.4.4. Attach an `onClick` handler that calls `targetStore.setSelected(drone.droneId)`.
+- [x] 7.4.4. Attach an `onClick` handler that calls `targetStore.setSelected(drone.droneId)`.
 
-### 7.5 `RangeCircles.tsx`
+### 7.5 `RangeCircles.tsx` ✅
 
-7.5.1. Render two `react-leaflet` `Circle` components centered on the platform.
+- [x] 7.5.1. Render two `react-leaflet` `Circle` components centered on the platform.
 
-7.5.2. The inner circle has `radius: 2000`, color `#00C853` (green), `fillOpacity: 0.04`, and `weight: 1.5`. This is the effective engagement range of the XM914E1.
+- [x] 7.5.2. The inner circle has `radius: 2000`, color `#00C853` (green), `fillOpacity: 0.04`, and `weight: 1.5`. This is the effective engagement range of the XM914E1.
 
-7.5.3. The outer circle has `radius: 5000`, color `#FFB300` (amber), `fillOpacity: 0.02`, `weight: 1`, and `dashArray: '6 4'`. This is the maximum detection range.
+- [x] 7.5.3. The outer circle has `radius: 5000`, color `#FFB300` (amber), `fillOpacity: 0.02`, `weight: 1`, and `dashArray: '6 4'`. This is the maximum detection range.
 
-### 7.6 `LineOfFire.tsx`
+### 7.6 `LineOfFire.tsx` ✅
 
-7.6.1. Render a `react-leaflet` `Polyline` with two positions: the platform position and the selected drone position.
+- [x] 7.6.1. Render a `react-leaflet` `Polyline` with two positions: the platform position and the selected drone position.
 
-7.6.2. Style with color `#EF4444`, `weight: 2`, and `dashArray: '8 4'`.
+- [x] 7.6.2. Style with color `#EF4444`, `weight: 2`, and `dashArray: '8 4'`.
 
-7.6.3. Component must render nothing when `targetDrone` is null.
+- [x] 7.6.3. Component must render nothing when `targetDrone` is null.
 
-### 7.7 `TargetLockRing.tsx`
+### 7.7 `TargetLockRing.tsx` ✅
 
-7.7.1. Implement a CSS keyframe animation named `pulseRing` that scales the element from `0.9` to `1.3` and fades opacity from `1` to `0.4`, then returns, over a 1.4-second infinite loop.
+- [x] 7.7.1. Implement a CSS keyframe animation named `pulseRing` that scales the element from `0.9` to `1.3` and fades opacity from `1` to `0.4`, then returns, over a 1.4-second infinite loop.
 
-7.7.2. Apply this animation to a circular div overlay positioned at the drone marker location using a Leaflet `DivIcon`.
+- [x] 7.7.2. Apply this animation to a circular div overlay positioned at the drone marker location using a Leaflet `DivIcon`.
 
 ### 7.8 Acceptance criteria
 
-7.8.1. Map renders with CartoDB dark tiles. The platform marker is visible at the correct coordinate.
+- [x] 7.8.1. Map renders with CartoDB dark tiles. The platform marker is visible at the correct coordinate.
 
-7.8.2. Drone markers appear at the correct latitude/longitude for each drone in the store.
+- [x] 7.8.2. Drone markers appear at the correct latitude/longitude for each drone in the store.
 
-7.8.3. Each drone marker's color matches its current status.
+- [x] 7.8.3. Each drone marker's color matches its current status.
 
-7.8.4. Clicking a drone marker sets it as the selected target and immediately draws the line of fire from the platform to that drone.
+- [x] 7.8.4. Clicking a drone marker sets it as the selected target and immediately draws the line of fire from the platform to that drone.
 
-7.8.5. Range circles are visible at the correct radii around the platform.
+- [x] 7.8.5. Range circles are visible at the correct radii around the platform.
 
-7.8.6. As drone positions update via WebSocket, markers move on the map without full remount or flicker.
+- [x] 7.8.6. As drone positions update via WebSocket, markers move on the map without full remount or flicker.
 
 ---
 
@@ -1179,3 +1179,7 @@ td3/
 | 2026-03-18 | **Phase 4.5 Acceptance:** Added temporary debug display in Navbar showing `connectionStore.status` (Connected/Offline/Degraded) and `droneStore.drones.size`. Enables verification of 4.5.1–4.5.4 without React DevTools. Manual verification: start backend+frontend → status=Connected, drones populate; stop backend → status→Offline within ~15s; restart backend → status→Connected without reload. |
 | 2026-03-18 | **Phase 5.1–5.4:** Checked off 4.5.1–4.5.4. Installed @mui/icons-material@^6, @fontsource/jetbrains-mono. Created theme.ts: dark palette, JetBrains Mono typography, MuiPaper/MuiButton overrides; enhanced with MuiAppBar, MuiCard, MuiDrawer, MuiTextField, divider. Created router.tsx: / → Navigate /dashboard, /dashboard → DashboardView, /history commented. Created views/DashboardView.tsx (wraps MainLayout). main.tsx: ThemeProvider, CssBaseline, @fontsource/jetbrains-mono. App: RouterProvider. index.css: theme colors, JetBrains Mono font. MainLayout: theme background. |
 | 2026-03-18 | **Phase 5.5 Acceptance:** index.html body inline critical styles (background #0A0E1A, color, font-family) to prevent white flash before React load. index.css: html+body font cascade, explicit #0A0E1A background. Meets 5.5.1 (no flash), 5.5.2 (body bg), 5.5.3 (JetBrains Mono + monospace fallback). |
+| 2026-03-18 | **Phase 6 Layout cleanup:** DashboardView with flex layout (h-screen, overflow hidden), header, three-zone main row (left 280px, center flex-1, right 320px), bottom bar. Created Header (Navbar), BottomBar, StatusPanel (StatusCards+LogPanel), TargetPanel (PriorityTargetPanel), MapContainer (RadarDisplay). 768px responsive: MUI Drawers for sidebars, IconButtons in header. Borders #1A3A5C. Removed MainLayout, duplicate StatusCards from Navbar. StatusCards grid-cols-2 on narrow. |
+| 2026-03-19 | **Step 7 Leaflet map:** Replaced RadarDisplay with Leaflet map. Installed leaflet, react-leaflet@4, @types/leaflet. MapContainer: CartoDB dark tiles, Vite icon fix (import marker images). Created PlatformMarker (XM914E1 + heading arrow), DroneMarker (SVG arrow, color by status, TargetLockRing when selected), RangeCircles (2km green, 5km amber dashed), LineOfFire (platform→target). Deleted RadarDisplay. |
+| 2026-03-19 | **Step 7 checkboxes:** Marked 7.1–7.8 complete. Renamed TargetLockRing keyframe to `pulseRing` per 7.7.1. |
+| 2026-03-19 | **Step 7.8 acceptance criteria tests:** MapContainer.spec.tsx (7.8.1 tiles/platform, 7.8.2 drone markers, 7.8.4 click→line of fire, 7.8.5 range circles, 7.8.6 stable keys). DroneMarker.spec.tsx (7.8.3 status colors, 7.8.4 click→setSelected). RangeCircles.spec.tsx (7.8.5 2km/5km). LineOfFire.spec.tsx (7.8.4 polyline, 7.6.3 null). All 15 tests pass. |

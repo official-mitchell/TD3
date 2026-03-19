@@ -1,6 +1,6 @@
 /**
  * Socket.IO service — telemetry simulation and engagement handling.
- * Phase 2.4: heartbeat:ping → heartbeat:pong handler added.
+ * Phase 2.4: heartbeat:ping → heartbeat:pong. Added engagement:fire handler (Step 2.1).
  */
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
@@ -12,6 +12,7 @@ import Drone, {
 import WeaponPlatform, {
   IWeaponPlatform,
 } from '../models/weapon-platform.model';
+import TelemetryLog from '../models/telemetry-log.model';
 
 interface SimulationConfig {
   movementSpeed: number; // How fast drones move
@@ -65,6 +66,10 @@ export class SocketService {
 
       socket.on('heartbeat:ping', () => {
         socket.emit('heartbeat:pong');
+      });
+
+      socket.on('engagement:fire', async (payload: { droneId: string; timestamp?: string }) => {
+        await this.handleEngagementFire(payload.droneId, payload.timestamp ?? new Date().toISOString());
       });
 
       socket.on('disconnect', () => {
@@ -256,11 +261,75 @@ export class SocketService {
     return R * c;
   }
 
+  private async handleEngagementFire(droneId: string, timestamp: string) {
+    try {
+      const drone = await Drone.findOne({ droneId });
+      if (!drone || drone.status !== 'Engagement Ready' || !this.platform) {
+        return;
+      }
+      const distanceM = this.calculateDistance(drone.position, this.platform.position);
+      const rangeFactor = Math.max(0, 1 - distanceM / 2000);
+      const speedPenalty = drone.speed / 500;
+      const hitProbability = Math.min(1, Math.max(0,
+        0.85 * rangeFactor * (1 - speedPenalty * 0.3)
+      ));
+      const roll = Math.random();
+      const isHit = roll <= hitProbability;
+
+      await TelemetryLog.create({
+        timestamp,
+        droneId,
+        position: drone.position,
+        status: drone.status,
+        engagementOutcome: isHit ? 'Destroyed' : 'Missed',
+      });
+
+      if (isHit) {
+        drone.status = 'Hit';
+        await drone.save();
+        this.io.emit('drone:hit', { droneId, timestamp });
+        await new Promise((r) => setTimeout(r, 300));
+        drone.status = 'Destroyed';
+        await drone.save();
+        this.io.emit('drone:destroyed', { droneId });
+        const platformDoc = await WeaponPlatform.findOne({ isActive: true });
+        if (platformDoc) {
+          platformDoc.ammoCount = Math.max(0, platformDoc.ammoCount - 3);
+          platformDoc.killCount += 1;
+          await platformDoc.save();
+          this.platform = {
+            position: platformDoc.position,
+            heading: platformDoc.heading,
+            isActive: platformDoc.isActive,
+            ammoCount: platformDoc.ammoCount,
+            killCount: platformDoc.killCount,
+          };
+          this.io.emit('platform:status', this.platform);
+        }
+      } else {
+        this.io.emit('drone:missed', { droneId, outcome: 'Missed', timestamp });
+        const platformDoc = await WeaponPlatform.findOne({ isActive: true });
+        if (platformDoc && this.platform) {
+          this.platform = {
+            position: platformDoc.position,
+            heading: platformDoc.heading,
+            isActive: platformDoc.isActive,
+            ammoCount: platformDoc.ammoCount,
+            killCount: platformDoc.killCount,
+          };
+          this.io.emit('platform:status', this.platform);
+        }
+      }
+    } catch (error) {
+      console.error('Engagement fire error:', error);
+    }
+  }
+
   private startSimulation() {
-    // Update all drones every 2 seconds
+    // Update all drones every 2 seconds (exclude Hit/Destroyed)
     this.simulationInterval = setInterval(async () => {
       try {
-        const drones = await Drone.find();
+        const drones = await Drone.find({ status: { $nin: ['Hit', 'Destroyed'] } });
         for (const drone of drones) {
           await this.updateDrone(drone.droneId);
         }

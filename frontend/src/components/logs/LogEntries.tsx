@@ -81,14 +81,14 @@ export const EngagementLogCard: React.FC<{ entry: EngagementLogEntry }> = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="bg-slate-700/50 rounded-lg overflow-hidden">
+    <div className="bg-slate-700/50 rounded-lg overflow-hidden min-w-0">
       <div
-        className="p-3 cursor-pointer hover:bg-slate-700/70"
+        className="p-3 cursor-pointer hover:bg-slate-700/70 min-w-0"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between min-w-0 gap-2">
+          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
             <DroneIcon type={entry.droneType} />
             <span className="font-medium">{entry.droneType}</span>
             <span className="text-slate-400">|</span>
@@ -150,9 +150,9 @@ export const UpdateLogCard: React.FC<{ entry: UpdateLogEntry }> = ({
   entry,
 }) => {
   return (
-    <div className="bg-slate-700/50 rounded-lg p-3">
+    <div className="bg-slate-700/50 rounded-lg p-3 min-w-0 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0 overflow-hidden">
         <DroneIcon type={entry.droneType} />
         <span className="font-medium">{entry.droneType}</span>
         <span className="text-slate-400">|</span>

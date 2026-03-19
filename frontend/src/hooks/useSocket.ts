@@ -9,6 +9,7 @@ import { usePlatformStore } from '../store/platformStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { useEngagementLogStore } from '../store/engagementLogStore';
 import type { IDrone, IWeaponPlatform, IEngagementRecord } from '@td3/shared-types';
+import { setSocketRef } from '../lib/socketRef';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3333';
 
@@ -59,6 +60,7 @@ export const useSocket = () => {
     };
 
     socket.on('connect', () => {
+      setSocketRef(socket);
       connectionStore.setStatus('Connected');
       startHeartbeat();
     });
@@ -128,6 +130,7 @@ export const useSocket = () => {
 
     return () => {
       clearHeartbeat();
+      setSocketRef(null);
       socket.disconnect();
       socketRef.current = null;
     };

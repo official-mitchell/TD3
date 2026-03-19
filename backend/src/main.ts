@@ -1,5 +1,7 @@
 /**
  * TD3 Backend entry point. Phase 2.3: cleaned error middleware.
+ * Default MONGODB_URI uses localhost for local dev; Docker Compose sets mongodb hostname.
+ * CORS: added localhost:4200 for Vite dev server.
  */
 import express, { Request, Response, NextFunction } from 'express';
 import * as path from 'path';
@@ -15,7 +17,7 @@ const app = express();
 // MongoDB connection
 const mongoUri =
   process.env.MONGODB_URI ||
-  'mongodb://td3_user:td3_password@mongodb:27017/td3';
+  'mongodb://td3_user:td3_password@localhost:27017/td3?authSource=admin';
 
 mongoose
   .connect(mongoUri, {
@@ -54,7 +56,7 @@ app.use(
     origin:
       process.env.NODE_ENV === 'production'
         ? 'your-production-domain'
-        : ['http://localhost:3000', 'http://localhost:8000'],
+        : ['http://localhost:3000', 'http://localhost:4200', 'http://localhost:8000'],
   })
 );
 app.use(express.json()); // Body parsing

@@ -1,3 +1,6 @@
+/**
+ * Vite config for frontend. Added server.fs.allow for @fontsource/jetbrains-mono from workspace node_modules.
+ */
 /// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -10,6 +13,9 @@ export default defineConfig({
   server: {
     port: 4200,
     host: 'localhost',
+    fs: {
+      allow: [path.resolve(__dirname, '..'), path.resolve(__dirname, '../node_modules')],
+    },
   },
 
   preview: {

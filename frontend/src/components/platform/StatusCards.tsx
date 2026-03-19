@@ -1,3 +1,7 @@
+/**
+ * Status cards for Weapon System, Position, Bearing, Status.
+ * 2x2 grid layout to fit sidebar; min-w-0 prevents overflow.
+ */
 import React from 'react';
 
 interface PlatformStatus {
@@ -20,12 +24,12 @@ const StatusCard: React.FC<{
   title: string;
   children: React.ReactNode;
 }> = ({ title, children }) => (
-  <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-    <div className="flex items-center gap-2 mb-3">
-      <span className="text-cyan-400">★</span>
-      <span className="text-sm text-slate-400">{title}</span>
+  <div className="bg-slate-800 rounded-lg p-4 border border-slate-700 min-w-0 overflow-hidden">
+    <div className="flex items-center gap-2 mb-3 min-w-0">
+      <span className="text-cyan-400 flex-shrink-0">★</span>
+      <span className="text-sm text-slate-400 truncate">{title}</span>
     </div>
-    {children}
+    <div className="min-w-0 overflow-hidden break-words">{children}</div>
   </div>
 );
 
@@ -48,7 +52,7 @@ export const StatusCards: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-4 gap-4 px-6">
+    <div className="grid grid-cols-2 gap-3 min-w-0">
       <StatusCard title="Weapon System">
         <div className="space-y-1">
           <div className="text-lg font-medium">{status.weaponSystem.name}</div>

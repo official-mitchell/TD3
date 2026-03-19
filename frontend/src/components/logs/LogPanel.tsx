@@ -23,7 +23,7 @@ import {
 // }> = ({ title, entries }) => (
 //   <div className="flex flex-col h-full bg-slate-800/80 rounded-lg p-4">
 //     <h2 className="text-lg font-bold mb-4">{title}</h2>
-//     <div className="flex-1 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+//     <div className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
 //       {entries.map((entry, i) => (
 //         <LogEntry key={i} entry={entry} />
 //       ))}
@@ -84,11 +84,11 @@ export const LogPanel: React.FC = () => {
   ];
 
   return (
-    <div className="grid grid-rows-2 gap-4 h-full">
-      <div className="h-full min-h-0">
-        <div className="flex flex-col h-full bg-slate-800/80 rounded-lg p-4 border border-slate-700">
+    <div className="grid grid-rows-2 gap-4 h-full min-w-0">
+      <div className="h-full min-h-0 min-w-0">
+        <div className="flex flex-col h-full bg-slate-800/80 rounded-lg p-4 border border-slate-700 overflow-hidden">
           <h2 className="text-lg font-bold mb-4">Engagement Log</h2>
-          <div className="flex-1 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+          <div className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
             {engagementLogs.map((entry, i) => (
               <EngagementLogCard key={i} entry={entry} />
             ))}
@@ -96,10 +96,10 @@ export const LogPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="h-full min-h-0">
-        <div className="flex flex-col h-full bg-slate-800/80 rounded-lg p-4 border border-slate-700">
+      <div className="h-full min-h-0 min-w-0">
+        <div className="flex flex-col h-full bg-slate-800/80 rounded-lg p-4 border border-slate-700 overflow-hidden">
           <h2 className="text-lg font-bold mb-4">Update Log</h2>
-          <div className="flex-1 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+          <div className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
             {updateLogs.map((entry, i) => (
               <UpdateLogCard key={i} entry={entry} />
             ))}
