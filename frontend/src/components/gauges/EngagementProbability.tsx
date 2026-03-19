@@ -6,7 +6,7 @@
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 
-const WIDTH = 120;
+const WIDTH = 140;
 const HEIGHT = 60;
 
 const getProbability = (distanceMeters: number): number => {
@@ -36,7 +36,8 @@ export const EngagementProbability: React.FC<EngagementProbabilityProps> = ({ di
     const color = getColor(probability);
     const pct = (probability * 100).toFixed(0);
 
-    const g = d3.select(svgRef.current).append('g').attr('transform', 'translate(10, 5)');
+    const centerX = WIDTH / 2;
+    const g = d3.select(svgRef.current).append('g').attr('transform', `translate(${centerX}, 5)`);
 
     // Small arc gauge (semicircle)
     const arc = d3
@@ -49,12 +50,13 @@ export const EngagementProbability: React.FC<EngagementProbabilityProps> = ({ di
     g.append('path')
       .attr('d', arc() ?? '')
       .attr('fill', color)
-      .attr('transform', 'translate(25, 25)');
+      .attr('transform', 'translate(-40, 25)');
 
     // Large bold percentage
     g.append('text')
-      .attr('x', 55)
+      .attr('x', 0)
       .attr('y', 28)
+      .attr('text-anchor', 'middle')
       .attr('fill', color)
       .attr('font-size', '18px')
       .attr('font-weight', 'bold')
@@ -63,14 +65,14 @@ export const EngagementProbability: React.FC<EngagementProbabilityProps> = ({ di
 
     // Label
     g.append('text')
-      .attr('x', 55)
+      .attr('x', 0)
       .attr('y', 48)
       .attr('text-anchor', 'middle')
       .attr('fill', '#7B9BB5')
       .attr('font-size', '10px')
       .attr('font-family', 'JetBrains Mono, monospace')
-      .text('ENG. PROB');
+      .text('Engagement Probability');
   }, [probability]);
 
-  return <svg ref={svgRef} width={WIDTH} height={HEIGHT} />;
+  return <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" />;
 };

@@ -689,7 +689,11 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 ## Frontend Fixes:
 
+- [ ] make the telemetry overlay background 30% more transparent. 
 - [ ] allow me to press cmd + enter (on Mac) to fire the turret; different on PC — let's detect the user's device settings
+- [ ] enable sounds in settings... slider for sound volume... make frontend/src/assets/diesel-idle.mp3 always present
+- [ ] enable first 1.5 seconds of frontend/src/assets/mechanical-clamp.mp3 for swivel sound (have it fade out)
+- [ ] enable frontend/src/assets/a-10-warthog-brrrt.mp3 when firing
 - [ ] slow down swivels so it takes a little bit of time to reposition
 - [ ] show distance between the turret and the drone as a stat on the line between vehicle and the drone
 - [ ] allow me to click off the drone to deselect that target.
@@ -698,12 +702,16 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 - [ ] create tracer rounds that match the amount count when they hit the drones
 - [ ] create animation for landing hits and missed shots (show the rounds missing the target) and create little X's when they miss (assume they land behind the drone in some way)
 - [ ] create a range accuracy gradient cone away from the vehicle
-
+- [ ] generate FRIENDLIES on the screen — representing radar equipment, personnel, command posts, HQs, vehicles, aircraft, and ships. Generate friendlies inside, outside, and far outside the turret. Persist the allies in a database. When I click on them allow me to see their status.
+- [ ] 
 
 
 ---
 
 ## 13. Backend — Enhanced Drone Behavior
+
+- [ ] fix target creation.... ensure they're getting created inside and out of range... add more and more drones... 
+- [ ] ensure at least 50%+ the behavior of the drones is to fly TOWARD the turret; the other 50% behavior should be flying inside/outside the bounds potentially striking different targets
 
 **Depends on:** Step 2.
 **Output:** Updated telemetry simulation logic in `apps/backend/src/services/socket-service.ts` replacing random movement with purpose-driven swarm behavior.
@@ -1209,5 +1217,9 @@ td3/
 | 2026-03-19 | **Step 10.6 acceptance criteria tests:** BottomBar.spec.tsx for 10.6.1 (FIRE disabled/labeled NO TARGET), 10.6.2 (FIRE activates with fire-pulse when Engagement Ready), 10.6.3 (emit engagement:fire, ENGAGING… ~350ms), 10.6.4 (appendLog→log feed), 10.6.5 (remove+nextTarget→auto-advance), 10.6.6 (Next/Prev wrap). All 13 BottomBar tests pass. |
 | 2026-03-19 | **Step 11.1–11.3 Header and connection badge:** Rewrote Header.tsx per 11.1 (left: TD3 primary.main + TACTICAL DRONE DEFENSE DASHBOARD text.secondary; right: connection badge + drawer toggles on mobile). 11.2: status from useConnectionStore, ● colored #00C853/#FFB300/#FF1744, Degraded blink. 11.3: full width, real-time badge, mobile drawer toggles. DashboardView passes isMobile and onOpenLeftPanel/onOpenRightPanel to Header. Header.spec.tsx for 11.1–11.3. Removed Navbar from Header. |
 | 2026-03-19 | **LocationPicker positioning and tests:** Fixed LocationPicker rendering behind Leaflet map (z-index 50 < Leaflet ~700). Renders via createPortal to document.body with z-index 9999. Added p-4 padding for small screens. LocationPicker.spec.tsx: overlay z-index ≥9999, portal to body, backdrop/modal click behavior, Cancel/Apply. DashboardView.spec.tsx: integration test—open hamburger → Change location → overlay z-index > 700. Header.spec.tsx: removed connection badge tests (badge removed in hamburger redesign). |
+| 2026-03-19 | **Left sidebar layout and telemetry gauges:** DroneDetailPanel: formatAltitude/formatSpeed (1 decimal) to prevent long-float overflow; truncate on grid cells; min-w-0. TelemetryGauges: card wrapper (bg-slate-800/80, border), "Telemetry" title, data-testid. ThreatMeter: label below bar to prevent truncation; bar 120px; WIDTH 140. All gauges: WIDTH 140, min-w-0. formatters.ts: formatAltitude, formatSpeed. formatters.spec.ts + TargetPanel layout tests: formatted values, no raw floats, telemetry card, gauge labels visible. |
+| 2026-03-19 | **Telemetry over map:** Moved telemetry from sidebar to floating overlay on map. TelemetryOverlay: semi-transparent (rgba 0.85, backdrop-filter blur), positioned via latLngToContainerPoint near selected drone (offset 24px), 2x2 grid of Speed/Altitude/Threat/Eng. Prob charts. Removed TelemetryGauges from TargetPanel. MapContainer.spec: overlay renders when drone selected, unmounts when deselected. |
+| 2026-03-19 | **Telemetry overlay refinements:** Background 30% more transparent (0.55). Removed "Telemetry" from header. SpeedGauge: fixed top-left (donut arc, track + fill, SPD label). ElevationChart: X/Y quarter-circle (90°), arc = altitude vs elevation angle, (0,0) = vehicle (blinking), turret line = target elevation, drone point. calculateElevationAngle helper. |
+| 2026-03-19 | **Telemetry overlay v2:** Fixed bottom-left of map (absolute bottom-4 left-4). ElevationChart: transparent grid lines, X/Y axis lines, tick numbers (0°–90°), ALT/elevation labels white. SpeedGauge: 40% larger arc, tick numbers (0/100/200/300), bold value "X km/h". EngagementProbability: full "Engagement Probability" label. |
 | 2026-03-19 | **Step 12.1–12.5 D3 Telemetry Gauges:** Installed d3 and @types/d3. Created SpeedGauge, AltitudeBar, ThreatMeter, EngagementProbability in frontend/src/components/gauges/. All follow 12.3 pattern (ref, useEffect, clear+redraw). SpeedGauge: semicircle arc, green→amber→red. AltitudeBar: vertical bar, #1E90FF. ThreatMeter: horizontal bar, green→red. EngagementProbability: (1−d/2000)*0.85, red/amber/green. TelemetryGauges composes all four. TargetPanel renders gauges at bottom when selectedDroneId non-null. |
 | 2026-03-19 | **Step 12.6 acceptance criteria tests:** TargetPanel.spec.tsx for 12.6.1 (all four gauges render with drone values), 12.6.2 (telemetry update→gauges re-render), 12.6.3 (deselect/destroyed→gauges unmount). All 13 TargetPanel tests pass. |

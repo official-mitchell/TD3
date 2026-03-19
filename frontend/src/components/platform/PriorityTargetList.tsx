@@ -8,6 +8,7 @@ import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { calculateDistance, calculateBearing } from '../../utils/calculations';
+import { formatAltitude, formatSpeed } from '../../utils/formatters';
 import type { IDrone } from '@td3/shared-types';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -59,11 +60,11 @@ const TargetCard: React.FC<{
             </span>
           </div>
           <div className="text-sm text-slate-400">{drone.droneType}</div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm text-slate-300">
-            <span>DIST: {distKm.toFixed(2)}km</span>
-            <span>BRG: {bearingDeg.toFixed(0)}°</span>
-            <span>ALT: {drone.position.altitude}m</span>
-            <span>SPD: {drone.speed} km/h</span>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm text-slate-300 min-w-0">
+            <span className="truncate">DIST: {distKm.toFixed(2)}km</span>
+            <span className="truncate">BRG: {bearingDeg.toFixed(0)}°</span>
+            <span className="truncate">ALT: {formatAltitude(drone.position.altitude)}</span>
+            <span className="truncate">SPD: {formatSpeed(drone.speed)}</span>
           </div>
           <div className="mt-2">
             <div className="flex items-center justify-between text-xs mb-1">

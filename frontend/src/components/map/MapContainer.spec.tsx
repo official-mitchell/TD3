@@ -9,7 +9,12 @@ import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import type { IDrone, IWeaponPlatform } from '@td3/shared-types';
 
-const mockMap = { setView: vi.fn(), getZoom: vi.fn(() => 14) };
+const mockMap = {
+  setView: vi.fn(),
+  getZoom: vi.fn(() => 14),
+  getContainer: () => document.body,
+  latLngToContainerPoint: vi.fn(() => ({ x: 200, y: 150 })),
+};
 
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children: React.ReactNode }) => (
@@ -40,12 +45,14 @@ vi.mock('react-leaflet', () => ({
     <div data-testid="polyline" data-positions={JSON.stringify(positions)} />
   ),
   useMap: () => mockMap,
+  useMapEvents: () => mockMap,
 }));
 
 vi.mock('leaflet', () => ({
   default: {
     Icon: { Default: { prototype: {}, mergeOptions: vi.fn() } },
     divIcon: vi.fn(() => ({})),
+    latLng: (lat: number, lng: number) => ({ lat, lng }),
   },
 }));
 
@@ -160,6 +167,41 @@ describe('MapContainer', () => {
     expect(outer).toBeTruthy();
     expect(inner?.getAttribute('data-lat')).toBe('37.7749');
     expect(outer?.getAttribute('data-lat')).toBe('37.7749');
+  });
+
+  it('telemetry overlay renders over map when drone is selected', () => {
+    const drones = new Map<string, IDrone>([
+      ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', speed: 50, position: { lat: 37.78, lng: -122.42, altitude: 100 }, threatLevel: 0.5 })],
+    ]);
+    useDroneStore.setState({ drones });
+    usePlatformStore.setState({ platform: PLATFORM });
+    useTargetStore.setState({ selectedDroneId: 'D1' });
+    render(<MapContainer />);
+
+    const overlay = screen.getByTestId('telemetry-overlay');
+    expect(overlay).toBeTruthy();
+    expect(screen.getByText('THREAT 50%')).toBeTruthy();
+    expect(screen.getByText(/50 km\/h/)).toBeTruthy();
+    expect(screen.getByText(/ALT 100m/)).toBeTruthy();
+    expect(screen.getByText('Engagement Probability')).toBeTruthy();
+  });
+
+  it('telemetry overlay unmounts when drone deselected', () => {
+    const drones = new Map<string, IDrone>([
+      ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready' })],
+    ]);
+    useDroneStore.setState({ drones });
+    usePlatformStore.setState({ platform: PLATFORM });
+    useTargetStore.setState({ selectedDroneId: 'D1' });
+    render(<MapContainer />);
+
+    expect(screen.getByTestId('telemetry-overlay')).toBeTruthy();
+
+    act(() => {
+      useTargetStore.setState({ selectedDroneId: null });
+    });
+
+    expect(screen.queryByTestId('telemetry-overlay')).toBeNull();
   });
 
   it('7.8.6: drone markers use stable keys (droneId) so position updates do not cause remounts', () => {

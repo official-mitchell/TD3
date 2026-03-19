@@ -1,7 +1,7 @@
 /**
  * Drone detail panel. Per Implementation Plan 9.2.
  * Selection persists across drone:update (9.2.4).
- * Shows selected drone or NO TARGET SELECTED. Selection persists across drone:update.
+ * Shows selected drone or NO TARGET SELECTED. Altitude/speed formatted to prevent overflow.
  */
 import React from 'react';
 import { format } from 'date-fns';
@@ -9,6 +9,7 @@ import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { calculateDistance, calculateBearing } from '../../utils/calculations';
+import { formatAltitude, formatSpeed } from '../../utils/formatters';
 import type { IDrone } from '@td3/shared-types';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -65,12 +66,12 @@ export const DroneDetailPanel: React.FC = () => {
         {drone.status === 'Engagement Ready' && (
           <div className="text-green-400 font-medium">✓ WITHIN ENGAGEMENT RANGE</div>
         )}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-slate-300">
-          <span>Distance: {distKm.toFixed(2)}km</span>
-          <span>Bearing: {degrees.toFixed(1)}° ({cardinal})</span>
-          <span>Altitude: {drone.position.altitude}m</span>
-          <span>Speed: {drone.speed} km/h</span>
-          <span>Threat: {threatPct}%</span>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-slate-300 min-w-0">
+          <span className="truncate" title={`Distance: ${distKm.toFixed(2)}km`}>Distance: {distKm.toFixed(2)}km</span>
+          <span className="truncate" title={`Bearing: ${degrees.toFixed(1)}° (${cardinal})`}>Bearing: {degrees.toFixed(1)}° ({cardinal})</span>
+          <span className="truncate" title={`Altitude: ${formatAltitude(drone.position.altitude)}`}>Altitude: {formatAltitude(drone.position.altitude)}</span>
+          <span className="truncate" title={`Speed: ${formatSpeed(drone.speed)}`}>Speed: {formatSpeed(drone.speed)}</span>
+          <span className="truncate">Threat: {threatPct}%</span>
         </div>
         <div className="text-slate-400">
           Position: {drone.position.lat.toFixed(4)}, {drone.position.lng.toFixed(4)}

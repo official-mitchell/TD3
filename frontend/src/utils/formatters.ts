@@ -5,6 +5,16 @@ export const formatDistance = (meters: number): string => {
   return `${(meters / 1000).toFixed(2)}km`;
 };
 
+/** Altitude in meters, 1 decimal max (e.g. 119.9m). Prevents long floats from overflowing. */
+export const formatAltitude = (meters: number): string => {
+  return `${Number(meters.toFixed(1))}m`;
+};
+
+/** Speed in km/h, 1 decimal max (e.g. 0.0 km/h). Prevents long floats from overflowing. */
+export const formatSpeed = (kmh: number): string => {
+  return `${Number(kmh.toFixed(1))} km/h`;
+};
+
 export const formatBearing = (degrees: number, cardinal: string): string => {
   return `${degrees.toFixed(1)}° (${cardinal})`;
 };

@@ -2,6 +2,7 @@
  * Leaflet map container. Per Implementation Plan 7.
  * Platform marker, drone markers, range circles, line of fire.
  * Loading overlay: 10-segment bar centered over map, fades out at 100%.
+ * TelemetryOverlay: floating mini dashboard over map when drone selected.
  */
 import React, { useState, useEffect } from 'react';
 import { MapContainer as LeafletMap, TileLayer, useMap } from 'react-leaflet';
@@ -14,6 +15,7 @@ import { PlatformMarker } from './PlatformMarker';
 import { DroneMarker } from './DroneMarker';
 import { RangeCircles } from './RangeCircles';
 import { LineOfFire } from './LineOfFire';
+import { TelemetryOverlay } from './TelemetryOverlay';
 
 // 7.1.2 Vite pitfall: fix Leaflet default marker icon 404s
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -112,6 +114,7 @@ const MapContent: React.FC = () => {
       {platform && selectedDrone && (
         <LineOfFire platform={platform} targetDrone={selectedDrone} />
       )}
+      <TelemetryOverlay />
       {droneList.map((drone) => (
         <DroneMarker
           key={drone.droneId}

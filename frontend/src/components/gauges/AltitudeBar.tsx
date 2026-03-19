@@ -6,7 +6,7 @@
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 
-const WIDTH = 120;
+const WIDTH = 140;
 const HEIGHT = 80;
 const MAX_ALT = 1000;
 
@@ -56,5 +56,5 @@ export const AltitudeBar: React.FC<AltitudeBarProps> = ({ value }) => {
       .attr('rx', 2);
   }, [value]);
 
-  return <svg ref={svgRef} width={WIDTH} height={HEIGHT} />;
+  return <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" />;
 };

@@ -38,3 +38,14 @@ export const calculateBearing = (pos1: LatLng, pos2: LatLng) => {
     cardinal: directions[index],
   };
 };
+
+/** Elevation angle (degrees above horizontal) from platform to drone. Platform assumed at ground (alt 0). */
+export const calculateElevationAngle = (
+  platformPos: { lat: number; lng: number },
+  dronePos: { lat: number; lng: number; altitude: number }
+): number => {
+  const slantMeters = calculateDistance(platformPos, dronePos);
+  const altMeters = dronePos.altitude;
+  const horizMeters = Math.sqrt(Math.max(0, slantMeters * slantMeters - altMeters * altMeters));
+  return (Math.atan2(altMeters, horizMeters) * 180) / Math.PI;
+};
