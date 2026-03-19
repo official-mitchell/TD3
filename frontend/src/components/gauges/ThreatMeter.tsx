@@ -1,14 +1,20 @@
 /**
- * ThreatMeter. Per Implementation Plan 12.3–12.4.3.
- * D3 horizontal rectangle, ref+useEffect pattern, clear+redraw.
- * Horizontal rectangle, filled width proportional to value (0–1). Color green→red.
- * Label below bar to prevent truncation in narrow sidebars.
+ * ThreatMeter. Horizontal bar with gradient fill.
+ * % shown inside bar: in filled section if >50%, in empty section if ≤50%.
+ * Question mark icon with hover tooltip.
  */
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
+import Tooltip from '@mui/material/Tooltip';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const WIDTH = 140;
 const HEIGHT = 44;
+const BAR_WIDTH = 120;
+const BAR_HEIGHT = 14;
+
+const TOOLTIP_TEXT =
+  'Threat level reflects the assessed risk to the craft from nearby hostiles or hazards. Higher values indicate greater danger.';
 
 export interface ThreatMeterProps {
   value: number;
@@ -22,40 +28,76 @@ export const ThreatMeter: React.FC<ThreatMeterProps> = ({ value }) => {
     d3.select(svgRef.current).selectAll('*').remove();
 
     const ratio = Math.min(1, Math.max(0, value));
-    const barWidth = 120;
-    const filledWidth = ratio * barWidth;
-    const color = d3.interpolateRgb('#00C853', '#FF1744')(ratio);
+    const filledWidth = ratio * BAR_WIDTH;
+    const pct = `${(value * 100).toFixed(0)}%`;
 
     const g = d3.select(svgRef.current).append('g').attr('transform', 'translate(10, 4)');
+
+    // Gradient definition
+    const defs = g.append('defs');
+    const grad = defs
+      .append('linearGradient')
+      .attr('id', 'threatGrad')
+      .attr('x1', 0)
+      .attr('x2', 1)
+      .attr('y1', 0)
+      .attr('y2', 0);
+    grad.append('stop').attr('offset', '0%').attr('stop-color', '#00C853');
+    grad.append('stop').attr('offset', '100%').attr('stop-color', '#FF1744');
 
     // Bar background
     g.append('rect')
       .attr('x', 0)
       .attr('y', 0)
-      .attr('width', barWidth)
-      .attr('height', 14)
+      .attr('width', BAR_WIDTH)
+      .attr('height', BAR_HEIGHT)
       .attr('fill', '#1A3A5C')
       .attr('rx', 2);
 
-    // Filled portion
+    // Filled portion (gradient)
     g.append('rect')
       .attr('x', 0)
       .attr('y', 0)
       .attr('width', filledWidth)
-      .attr('height', 14)
-      .attr('fill', color)
+      .attr('height', BAR_HEIGHT)
+      .attr('fill', 'url(#threatGrad)')
       .attr('rx', 2);
 
-    // Label below bar (prevents truncation)
+    // % inside bar: filled if >50%, empty if ≤50%
+    const inFilled = ratio > 0.5;
+    const textX = inFilled ? filledWidth / 2 : filledWidth + (BAR_WIDTH - filledWidth) / 2;
+    const textFill = inFilled ? '#FFFFFF' : '#E8F4FD';
+
     g.append('text')
-      .attr('x', barWidth / 2)
+      .attr('x', textX)
+      .attr('y', BAR_HEIGHT / 2)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('fill', textFill)
+      .attr('font-size', '10px')
+      .attr('font-weight', 'bold')
+      .attr('font-family', 'JetBrains Mono, monospace')
+      .text(pct);
+
+    // Label below bar
+    g.append('text')
+      .attr('x', BAR_WIDTH / 2)
       .attr('y', 32)
       .attr('text-anchor', 'middle')
       .attr('fill', '#E8F4FD')
       .attr('font-size', '11px')
       .attr('font-family', 'JetBrains Mono, monospace')
-      .text(`THREAT ${(value * 100).toFixed(0)}%`);
+      .text('THREAT');
   }, [value]);
 
-  return <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" />;
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="flex items-center gap-1">
+        <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" />
+        <Tooltip title={TOOLTIP_TEXT} arrow placement="top">
+          <HelpOutlineIcon className="cursor-help text-cyan-400/80 hover:text-cyan-300" sx={{ fontSize: 16 }} />
+        </Tooltip>
+      </div>
+    </div>
+  );
 };

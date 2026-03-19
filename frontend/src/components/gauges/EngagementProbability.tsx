@@ -1,24 +1,25 @@
 /**
- * EngagementProbability. Per Implementation Plan 12.3–12.4.4.
- * D3 arc + text, ref+useEffect pattern, clear+redraw.
- * probability = (1 - distanceMeters/2000) * 0.85, clamped [0,1]. Large % + small arc. Color: red <0.5, amber 0.5–0.75, green >0.75.
+ * EngagementProbability. Horizontal bar with gradient fill.
+ * % shown inside bar: in filled section if >50%, in empty section if ≤50%.
+ * Question mark icon with hover tooltip.
  */
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
+import Tooltip from '@mui/material/Tooltip';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const WIDTH = 140;
-const HEIGHT = 60;
+const HEIGHT = 50;
+const BAR_WIDTH = 120;
+const BAR_HEIGHT = 14;
 
 const getProbability = (distanceMeters: number): number => {
   const p = (1 - distanceMeters / 2000) * 0.85;
   return Math.min(1, Math.max(0, p));
 };
 
-const getColor = (p: number): string => {
-  if (p < 0.5) return '#FF1744';
-  if (p < 0.75) return '#FFB300';
-  return '#00C853';
-};
+const TOOLTIP_TEXT =
+  'Engagement probability estimates the likelihood of engaging a target based on distance to the platform. Closer targets have higher probability.';
 
 export interface EngagementProbabilityProps {
   distanceMeters: number;
@@ -33,46 +34,77 @@ export const EngagementProbability: React.FC<EngagementProbabilityProps> = ({ di
     if (!svgRef.current) return;
     d3.select(svgRef.current).selectAll('*').remove();
 
-    const color = getColor(probability);
-    const pct = (probability * 100).toFixed(0);
+    const filledWidth = probability * BAR_WIDTH;
+    const pct = `${(probability * 100).toFixed(0)}%`;
 
-    const centerX = WIDTH / 2;
-    const g = d3.select(svgRef.current).append('g').attr('transform', `translate(${centerX}, 5)`);
+    const g = d3.select(svgRef.current).append('g').attr('transform', 'translate(10, 4)');
 
-    // Small arc gauge (semicircle)
-    const arc = d3
-      .arc()
-      .innerRadius(0)
-      .outerRadius(18)
-      .startAngle(0)
-      .endAngle(probability * Math.PI);
+    // Gradient: red → amber → green
+    const defs = g.append('defs');
+    const grad = defs
+      .append('linearGradient')
+      .attr('id', 'engagementGrad')
+      .attr('x1', 0)
+      .attr('x2', 1)
+      .attr('y1', 0)
+      .attr('y2', 0);
+    grad.append('stop').attr('offset', '0%').attr('stop-color', '#FF1744');
+    grad.append('stop').attr('offset', '50%').attr('stop-color', '#FFB300');
+    grad.append('stop').attr('offset', '100%').attr('stop-color', '#00C853');
 
-    g.append('path')
-      .attr('d', arc() ?? '')
-      .attr('fill', color)
-      .attr('transform', 'translate(-40, 25)');
-
-    // Large bold percentage
-    g.append('text')
+    // Bar background
+    g.append('rect')
       .attr('x', 0)
-      .attr('y', 28)
+      .attr('y', 0)
+      .attr('width', BAR_WIDTH)
+      .attr('height', BAR_HEIGHT)
+      .attr('fill', '#1A3A5C')
+      .attr('rx', 2);
+
+    // Filled portion (gradient)
+    g.append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', filledWidth)
+      .attr('height', BAR_HEIGHT)
+      .attr('fill', 'url(#engagementGrad)')
+      .attr('rx', 2);
+
+    // % inside bar: filled if >50%, empty if ≤50%
+    const inFilled = probability > 0.5;
+    const textX = inFilled ? filledWidth / 2 : filledWidth + (BAR_WIDTH - filledWidth) / 2;
+    const textFill = inFilled ? '#FFFFFF' : '#E8F4FD';
+
+    g.append('text')
+      .attr('x', textX)
+      .attr('y', BAR_HEIGHT / 2)
       .attr('text-anchor', 'middle')
-      .attr('fill', color)
-      .attr('font-size', '18px')
+      .attr('dominant-baseline', 'middle')
+      .attr('fill', textFill)
+      .attr('font-size', '10px')
       .attr('font-weight', 'bold')
       .attr('font-family', 'JetBrains Mono, monospace')
-      .text(`${pct}%`);
+      .text(pct);
 
-    // Label
+    // Label below bar
     g.append('text')
-      .attr('x', 0)
-      .attr('y', 48)
+      .attr('x', BAR_WIDTH / 2)
+      .attr('y', 34)
       .attr('text-anchor', 'middle')
-      .attr('fill', '#7B9BB5')
+      .attr('fill', '#FFFFFF')
       .attr('font-size', '10px')
       .attr('font-family', 'JetBrains Mono, monospace')
       .text('Engagement Probability');
   }, [probability]);
 
-  return <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" />;
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="flex items-center gap-1">
+        <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" />
+        <Tooltip title={TOOLTIP_TEXT} arrow placement="top">
+          <HelpOutlineIcon className="cursor-help text-cyan-400/80 hover:text-cyan-300" sx={{ fontSize: 16 }} />
+        </Tooltip>
+      </div>
+    </div>
+  );
 };

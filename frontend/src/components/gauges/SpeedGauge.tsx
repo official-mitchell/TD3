@@ -1,13 +1,13 @@
 /**
- * SpeedGauge. Per Implementation Plan 12.3–12.4.1.
- * D3 semicircle arc, 40% larger, with tick numbers. Color green→amber→red.
+ * SpeedGauge. D3 semicircle arc with big digital readout in center.
+ * Scale 0–100 km/h. Number + km/h on separate lines; "Speed" title below.
  */
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 
 const WIDTH = 140;
-const HEIGHT = 95;
-const RADIUS = 53; // 40% larger than 38
+const HEIGHT = 130;
+const RADIUS = 53;
 
 const colorScale = (t: number): string => {
   if (t <= 0.5) return d3.interpolateRgb('#00C853', '#EAB308')(t * 2);
@@ -19,7 +19,7 @@ export interface SpeedGaugeProps {
   max?: number;
 }
 
-export const SpeedGauge: React.FC<SpeedGaugeProps> = ({ value, max = 300 }) => {
+export const SpeedGauge: React.FC<SpeedGaugeProps> = ({ value, max = 100 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export const SpeedGauge: React.FC<SpeedGaugeProps> = ({ value, max = 300 }) => {
     const color = colorScale(ratio);
 
     const cx = WIDTH / 2;
-    const cy = HEIGHT - 16;
+    const cy = 50;
     const g = d3.select(svgRef.current).append('g').attr('transform', `translate(${cx}, ${cy})`);
 
     // Background semicircle (track)
@@ -55,9 +55,9 @@ export const SpeedGauge: React.FC<SpeedGaugeProps> = ({ value, max = 300 }) => {
       .attr('d', arc() ?? '')
       .attr('fill', color);
 
-    // Tick numbers around arc (0, 100, 200, 300)
-    const ticks = [0, 100, 200, 300];
-    ticks.forEach((v, i) => {
+    // Tick numbers around arc (0, 25, 50, 75, 100)
+    const ticks = [0, 25, 50, 75, 100];
+    ticks.forEach((v) => {
       const t = v / max;
       const angle = -Math.PI / 2 + t * Math.PI;
       const r = RADIUS + 12;
@@ -74,16 +74,41 @@ export const SpeedGauge: React.FC<SpeedGaugeProps> = ({ value, max = 300 }) => {
         .text(String(v));
     });
 
-    // Large value label below arc
+    // Digital readout: number only, reduced left offset (x=10)
     g.append('text')
       .attr('text-anchor', 'middle')
-      .attr('y', 38)
+      .attr('x', 10)
+      .attr('y', -8)
       .attr('fill', '#E8F4FD')
-      .attr('font-size', '14px')
+      .attr('font-size', '16px')
       .attr('font-weight', 'bold')
       .attr('font-family', 'JetBrains Mono, monospace')
-      .text(`${Math.round(value)} km/h`);
+      .text(String(Math.round(value)).padStart(2, '0'));
+
+    // km/h below number, outside arc so it doesn't intersect
+    g.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('x', 10)
+      .attr('y', 12)
+      .attr('fill', '#94A3B8')
+      .attr('font-size', '9px')
+      .attr('font-family', 'JetBrains Mono, monospace')
+      .text('km/h');
+
+    // Title "Speed" underneath
+    g.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('x', 10)
+      .attr('y', 72)
+      .attr('fill', '#E8F4FD')
+      .attr('font-size', '10px')
+      .attr('font-family', 'JetBrains Mono, monospace')
+      .text('SPEED');
   }, [value, max]);
 
-  return <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} />;
+  return (
+    <div className="mt-2">
+      <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="min-w-0" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} />
+    </div>
+  );
 };

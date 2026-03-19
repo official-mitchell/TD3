@@ -1,6 +1,7 @@
 /**
- * TelemetryOverlay. Mini analysis dashboard over the map.
- * Fixed bottom-left of map when drone selected. Speed, Altitude, Threat, Engagement Probability.
+ * TelemetryOverlay. Vertical layout, one reading per row.
+ * No outer background; each reading has its own transparent container.
+ * Speed, Elevation, Compass: square containers (same size). Threat, Engagement: bar containers (same size).
  */
 import React from 'react';
 import { createPortal } from 'react-dom';
@@ -10,10 +11,21 @@ import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { SpeedGauge } from '@components/gauges/SpeedGauge';
 import { ElevationChart } from '@components/gauges/ElevationChart';
+import { CompassSpeedGauge } from '@components/gauges/CompassSpeedGauge';
 import { ThreatMeter } from '@components/gauges/ThreatMeter';
 import { EngagementProbability } from '@components/gauges/EngagementProbability';
 import { calculateDistance } from '../../utils/calculations';
 import type { IDrone } from '@td3/shared-types';
+
+const SQUARE_SIZE = 140;
+const BAR_CONTAINER_HEIGHT = 56;
+
+const containerStyle = {
+  background: 'rgba(15, 25, 41, 0.4)',
+  backdropFilter: 'blur(6px)',
+  border: '1px solid rgba(14, 165, 233, 0.3)',
+  borderRadius: 8,
+};
 
 export const TelemetryOverlay: React.FC = () => {
   const map = useMap();
@@ -31,34 +43,53 @@ export const TelemetryOverlay: React.FC = () => {
   const overlay = (
     <div
       data-testid="telemetry-overlay"
-      className="absolute bottom-4 left-4 z-[600] pointer-events-auto rounded-lg border border-cyan-500/40 shadow-xl"
-      style={{
-        width: 320,
-        background: 'rgba(15, 25, 41, 0.55)',
-        backdropFilter: 'blur(8px)',
-      }}
+      className="absolute bottom-4 left-4 z-[600] pointer-events-auto flex flex-col gap-2"
     >
-      <div className="p-3">
-        <div className="text-xs font-bold text-cyan-400/90 mb-2 uppercase tracking-wider">
-          {drone.droneId}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col items-center">
-            <SpeedGauge value={drone.speed} />
-          </div>
-          <div className="flex flex-col items-center">
-            <ElevationChart
-              platformPosition={platformPosition}
-              dronePosition={drone.position}
-            />
-          </div>
-          <div className="flex flex-col items-center">
-            <ThreatMeter value={drone.threatLevel ?? 0} />
-          </div>
-          <div className="flex flex-col items-center">
-            <EngagementProbability distanceMeters={distanceMeters} />
-          </div>
-        </div>
+      <div className="text-xs font-bold text-cyan-400/90 uppercase tracking-wider mb-0.5">
+        {drone.droneId}
+      </div>
+
+      {/* Speed – square container */}
+      <div
+        className="flex flex-col items-center justify-center p-2"
+        style={{ ...containerStyle, width: SQUARE_SIZE, height: SQUARE_SIZE }}
+      >
+        <SpeedGauge value={drone.speed} />
+      </div>
+
+      {/* Elevation – square container */}
+      <div
+        className="flex flex-col items-center justify-center p-2"
+        style={{ ...containerStyle, width: SQUARE_SIZE, height: SQUARE_SIZE }}
+      >
+        <ElevationChart
+          platformPosition={platformPosition}
+          dronePosition={drone.position}
+        />
+      </div>
+
+      {/* Compass – square container */}
+      <div
+        className="flex flex-col items-center justify-center p-2"
+        style={{ ...containerStyle, width: SQUARE_SIZE, height: SQUARE_SIZE }}
+      >
+        <CompassSpeedGauge heading={drone.heading} speed={drone.speed} />
+      </div>
+
+      {/* Threat – bar container */}
+      <div
+        className="flex flex-col items-center justify-center p-2"
+        style={{ ...containerStyle, width: SQUARE_SIZE, height: BAR_CONTAINER_HEIGHT }}
+      >
+        <ThreatMeter value={drone.threatLevel ?? 0} />
+      </div>
+
+      {/* Engagement Probability – bar container */}
+      <div
+        className="flex flex-col items-center justify-center p-2"
+        style={{ ...containerStyle, width: SQUARE_SIZE, height: BAR_CONTAINER_HEIGHT }}
+      >
+        <EngagementProbability distanceMeters={distanceMeters} />
       </div>
     </div>
   );

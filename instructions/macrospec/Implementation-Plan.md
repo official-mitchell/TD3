@@ -689,7 +689,9 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 ## Frontend Fixes:
 
-- [ ] make the telemetry overlay background 30% more transparent. 
+- [x] make the telemetry overlay background 30% more transparent. 
+- [ ] cache recent user settings for size. Increase default size of the vehicle by 30% and drones by 15%
+- [ ] remove and consolidate target details to the interface itself.
 - [ ] allow me to press cmd + enter (on Mac) to fire the turret; different on PC — let's detect the user's device settings
 - [ ] enable sounds in settings... slider for sound volume... make frontend/src/assets/diesel-idle.mp3 always present
 - [ ] enable first 1.5 seconds of frontend/src/assets/mechanical-clamp.mp3 for swivel sound (have it fade out)
@@ -703,7 +705,6 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 - [ ] create animation for landing hits and missed shots (show the rounds missing the target) and create little X's when they miss (assume they land behind the drone in some way)
 - [ ] create a range accuracy gradient cone away from the vehicle
 - [ ] generate FRIENDLIES on the screen — representing radar equipment, personnel, command posts, HQs, vehicles, aircraft, and ships. Generate friendlies inside, outside, and far outside the turret. Persist the allies in a database. When I click on them allow me to see their status.
-- [ ] 
 
 
 ---
@@ -1221,5 +1222,8 @@ td3/
 | 2026-03-19 | **Telemetry over map:** Moved telemetry from sidebar to floating overlay on map. TelemetryOverlay: semi-transparent (rgba 0.85, backdrop-filter blur), positioned via latLngToContainerPoint near selected drone (offset 24px), 2x2 grid of Speed/Altitude/Threat/Eng. Prob charts. Removed TelemetryGauges from TargetPanel. MapContainer.spec: overlay renders when drone selected, unmounts when deselected. |
 | 2026-03-19 | **Telemetry overlay refinements:** Background 30% more transparent (0.55). Removed "Telemetry" from header. SpeedGauge: fixed top-left (donut arc, track + fill, SPD label). ElevationChart: X/Y quarter-circle (90°), arc = altitude vs elevation angle, (0,0) = vehicle (blinking), turret line = target elevation, drone point. calculateElevationAngle helper. |
 | 2026-03-19 | **Telemetry overlay v2:** Fixed bottom-left of map (absolute bottom-4 left-4). ElevationChart: transparent grid lines, X/Y axis lines, tick numbers (0°–90°), ALT/elevation labels white. SpeedGauge: 40% larger arc, tick numbers (0/100/200/300), bold value "X km/h". EngagementProbability: full "Engagement Probability" label. |
+| 2026-03-19 | **Telemetry overlay v3:** EngagementProbability: temperature-meter horizontal bar above text, white font. SpeedGauge: "Speed" title below chart, scale 0–100 km/h (ticks 0/25/50/75/100) so data visible. Threat + Engagement cells: pt-4 for horizontal alignment. |
 | 2026-03-19 | **Step 12.1–12.5 D3 Telemetry Gauges:** Installed d3 and @types/d3. Created SpeedGauge, AltitudeBar, ThreatMeter, EngagementProbability in frontend/src/components/gauges/. All follow 12.3 pattern (ref, useEffect, clear+redraw). SpeedGauge: semicircle arc, green→amber→red. AltitudeBar: vertical bar, #1E90FF. ThreatMeter: horizontal bar, green→red. EngagementProbability: (1−d/2000)*0.85, red/amber/green. TelemetryGauges composes all four. TargetPanel renders gauges at bottom when selectedDroneId non-null. |
 | 2026-03-19 | **Step 12.6 acceptance criteria tests:** TargetPanel.spec.tsx for 12.6.1 (all four gauges render with drone values), 12.6.2 (telemetry update→gauges re-render), 12.6.3 (deselect/destroyed→gauges unmount). All 13 TargetPanel tests pass. |
+| 2026-03-19 | **Telemetry overlay UX refinements:** SpeedGauge: "Speed" title centered with top margin, big digital readout (00 km/h) in center of arc. ThreatMeter + EngagementProbability: % inside bar (filled if >50%, empty if ≤50%), gradient fills (green→red, red→amber→green). Added ( ? ) help icons with MUI Tooltip (2-sentence explanations). Fifth meter: CompassSpeedGauge (compass + heading needle + speed in center). Overlay grid 3 cols top (Speed, Elevation, CompassSpeed), 2 cols bottom (Threat, Engagement). Width 440px. |
+| 2026-03-19 | **Telemetry overlay v4:** Replaced ( ? ) with HelpOutlineIcon. SpeedGauge: digital readout with number + km/h on separate lines (km/h below to avoid arc intersection), reduced left offset, "SPEED" label below. CompassSpeedGauge: removed "HDG", degrees only, +30% font, "HEADING" label below. Vertical layout (one reading per row). Removed outer background; each reading has transparent container (Speed/Elevation/Compass: 140×140; Threat/Engagement: 140×56). |
