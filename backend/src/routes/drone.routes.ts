@@ -92,7 +92,7 @@ router.post('/drones/test', async (req: Request, res: Response) => {
     const testDrone = new Drone({
       droneId: 'TEST001',
       status: 'Detected',
-      position: { lat: 37.7749, lng: -122.4194, altitude: 100 },
+      position: { lat: 25.905310475056915, lng: 51.543824178558054, altitude: 100 }, // Ras Laffan, Qatar
       speed: 15.5,
       heading: 180,
       threatLevel: 0.5,
@@ -148,7 +148,7 @@ router.post('/platform/init', async (req: Request, res: Response) => {
   try {
     await WeaponPlatform.deleteMany({});
     const platform = new WeaponPlatform({
-      position: { lat: 37.7749, lng: -122.4194 },
+      position: { lat: 25.905310475056915, lng: 51.543824178558054 }, // Ras Laffan, Qatar
       heading: 0,
       isActive: true,
       ammoCount: 300,
@@ -158,6 +158,28 @@ router.post('/platform/init', async (req: Request, res: Response) => {
     return res.json(platform);
   } catch (error) {
     return sendError(res, 500, 'Error initializing platform', error);
+  }
+});
+
+router.put('/platform/position', async (req: Request, res: Response) => {
+  try {
+    const { lat, lng } = req.body;
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      return sendError(res, 400, 'lat and lng must be numbers');
+    }
+    const platform = await WeaponPlatform.findOne({ isActive: true });
+    if (!platform) {
+      return sendError(res, 404, 'No active weapon platform found');
+    }
+    platform.position = { lat, lng };
+    await platform.save();
+    const socketService = req.app.get('socketService');
+    if (socketService?.updatePlatformPosition) {
+      socketService.updatePlatformPosition({ lat, lng });
+    }
+    return res.json(platform);
+  } catch (error) {
+    return sendError(res, 500, 'Error updating platform position', error);
   }
 });
 

@@ -1,5 +1,5 @@
 /**
- * TargetPanel tests. Per Implementation Plan 9.1, 9.2, 9.3.
+ * TargetPanel tests. Per Implementation Plan 9.1–9.3, 12.6.
  */
 import { beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
@@ -173,6 +173,83 @@ describe('TargetPanel', () => {
 
       expect(screen.getByText('NO TARGET SELECTED')).toBeTruthy();
       expect(useTargetStore.getState().selectedDroneId).toBe('D1');
+    });
+  });
+
+  describe('12.6 Acceptance criteria (D3 gauges)', () => {
+    it('12.6.1: selecting a drone causes all four gauges to render with drone values', () => {
+      usePlatformStore.setState({ platform: PLATFORM });
+      useDroneStore.setState({
+        drones: new Map([
+          ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', speed: 50, position: { lat: 37.78, lng: -122.42, altitude: 100 }, threatLevel: 0.5 })],
+        ]),
+      });
+      useTargetStore.setState({ selectedDroneId: 'D1' });
+      render(<TargetPanel />);
+
+      expect(screen.getByText('50 KM/H')).toBeTruthy();
+      expect(screen.getByText('100M')).toBeTruthy();
+      expect(screen.getByText('THREAT 50%')).toBeTruthy();
+      expect(screen.getByText('ENG. PROB')).toBeTruthy();
+    });
+
+    it('12.6.2: telemetry updates cause gauges to re-render with new values (no full remount)', () => {
+      usePlatformStore.setState({ platform: PLATFORM });
+      useDroneStore.setState({
+        drones: new Map([
+          ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', speed: 50, position: { lat: 37.78, lng: -122.42, altitude: 100 } })],
+        ]),
+      });
+      useTargetStore.setState({ selectedDroneId: 'D1' });
+      render(<TargetPanel />);
+
+      expect(screen.getByText('50 KM/H')).toBeTruthy();
+      expect(screen.getByText('100M')).toBeTruthy();
+
+      act(() => {
+        useDroneStore.getState().updateDrone(
+          createDrone({ droneId: 'D1', status: 'Engagement Ready', speed: 120, position: { lat: 37.78, lng: -122.42, altitude: 250 } })
+        );
+      });
+
+      expect(screen.getByText('120 KM/H')).toBeTruthy();
+      expect(screen.getByText('250M')).toBeTruthy();
+    });
+
+    it('12.6.3: deselecting drone causes gauges to unmount cleanly', () => {
+      usePlatformStore.setState({ platform: PLATFORM });
+      useDroneStore.setState({
+        drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready' })]]),
+      });
+      useTargetStore.setState({ selectedDroneId: 'D1' });
+      render(<TargetPanel />);
+
+      expect(screen.getByText('50 KM/H')).toBeTruthy();
+
+      act(() => {
+        useTargetStore.setState({ selectedDroneId: null });
+      });
+
+      expect(screen.queryByText('50 KM/H')).toBeNull();
+      expect(screen.getByText('NO TARGET SELECTED')).toBeTruthy();
+    });
+
+    it('12.6.3: drone destroyed causes gauges to unmount cleanly', () => {
+      usePlatformStore.setState({ platform: PLATFORM });
+      useDroneStore.setState({
+        drones: new Map([['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready' })]]),
+      });
+      useTargetStore.setState({ selectedDroneId: 'D1' });
+      render(<TargetPanel />);
+
+      expect(screen.getByText('50 KM/H')).toBeTruthy();
+
+      act(() => {
+        useDroneStore.getState().removeDrone('D1');
+      });
+
+      expect(screen.queryByText('50 KM/H')).toBeNull();
+      expect(screen.getByText('NO TARGET SELECTED')).toBeTruthy();
     });
   });
 });

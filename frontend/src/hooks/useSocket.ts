@@ -96,7 +96,7 @@ export const useSocket = () => {
     socket.on('drone:destroyed', (payload: { droneId: string }) => {
       droneStore.removeDrone(payload.droneId);
       const platform = platformStore.platform;
-      const center = platform?.position ?? { lat: 37.7749, lng: -122.4194 };
+      const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
       const sortedIds = useDroneStore
         .getState()
         .getSortedByDistance(center.lat, center.lng)

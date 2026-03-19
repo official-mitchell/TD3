@@ -7,9 +7,6 @@
 import React, { useState } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Drawer from '@mui/material/Drawer';
-import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
-import ListIcon from '@mui/icons-material/List';
 import { Header } from '@components/layout/Header';
 import { BottomBar } from '@components/layout/BottomBar';
 import { TargetPanel } from '@components/panels/TargetPanel';
@@ -37,29 +34,13 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#0A0E1A] text-[#E8F4FD]">
-      {/* 6.1.2 Header row */}
-      <div className="flex items-center gap-2 flex-shrink-0 border-b border-[#1A3A5C]">
-        {isMobile && (
-          <>
-            <IconButton
-              onClick={() => setLeftOpen(true)}
-              sx={{ color: '#E8F4FD' }}
-              aria-label="Open target panel"
-            >
-              <ListIcon />
-            </IconButton>
-            <IconButton
-              onClick={() => setRightOpen(true)}
-              sx={{ color: '#E8F4FD' }}
-              aria-label="Open status panel"
-            >
-              <MenuIcon />
-            </IconButton>
-          </>
-        )}
-        <div className="flex-1 min-w-0">
-          <Header />
-        </div>
+      {/* 6.1.2 Header row — 11.1–11.3 Header with connection badge and drawer toggles */}
+      <div className="flex items-center flex-shrink-0">
+        <Header
+          isMobile={isMobile}
+          onOpenLeftPanel={() => setLeftOpen(true)}
+          onOpenRightPanel={() => setRightOpen(true)}
+        />
       </div>
 
       {/* 6.1.3 Main row: left | center | right */}

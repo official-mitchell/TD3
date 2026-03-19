@@ -48,3 +48,5 @@ body {
 .fire-pulse {
   animation: fire-pulse-glow 1s ease-in-out infinite;
 }
+
+/* Platform loading bar: 10 segments */

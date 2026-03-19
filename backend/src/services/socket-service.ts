@@ -42,7 +42,7 @@ export class SocketService {
   constructor(server: HttpServer) {
     this.io = new SocketServer(server, {
       cors: {
-        origin: ['http://localhost:3000', 'http://localhost:8000'],
+        origin: ['http://localhost:3000', 'http://localhost:4200', 'http://localhost:5173', 'http://localhost:8000'],
         methods: ['GET', 'POST'],
       },
     });
@@ -121,28 +121,44 @@ export class SocketService {
     return patterns[droneType] || patterns.Unknown;
   }
 
+  /** Ras Laffan Industrial City, Qatar — default map center */
+  private static readonly RAS_LAFFAN = { lat: 25.905310475056915, lng: 51.543824178558054 };
+  private static readonly OLD_SF = { lat: 37.7749, lng: -122.4194 };
+
   private async initializePlatform() {
     try {
       // Get or create platform (ammoCount, killCount per IWeaponPlatform spec)
       let platform = await WeaponPlatform.findOne({ isActive: true });
       if (!platform) {
         platform = await WeaponPlatform.create({
-          position: { lat: 37.7749, lng: -122.4194 },
+          position: SocketService.RAS_LAFFAN,
           heading: 0,
           isActive: true,
           ammoCount: 300,
           killCount: 0,
         });
+      } else {
+        // Migrate legacy SF position to Ras Laffan
+        const pos = platform.position as { lat: number; lng: number };
+        const isOldSf =
+          Math.abs(pos.lat - SocketService.OLD_SF.lat) < 0.001 &&
+          Math.abs(pos.lng - SocketService.OLD_SF.lng) < 0.001;
+        if (isOldSf) {
+          platform.position = SocketService.RAS_LAFFAN;
+          await platform.save();
+          console.log('Migrated platform position from SF to Ras Laffan, Qatar');
+        }
       }
       // Ensure IWeaponPlatform shape (legacy docs may lack ammoCount/killCount)
       this.platform = {
-        position: platform.position,
+        position: platform.position as { lat: number; lng: number },
         heading: platform.heading,
         isActive: platform.isActive,
         ammoCount: platform.ammoCount ?? 300,
         killCount: platform.killCount ?? 0,
       };
       console.log('Weapon platform initialized:', this.platform);
+      this.io.emit('platform:status', this.platform);
     } catch (error) {
       console.error('Error initializing weapon platform:', error);
     }
@@ -150,7 +166,14 @@ export class SocketService {
 
   // Add method to get platform position
   private getPlatformPosition() {
-    return this.platform?.position || { lat: 37.7749, lng: -122.4194 };
+    return this.platform?.position || SocketService.RAS_LAFFAN;
+  }
+
+  /** Public: update platform position and broadcast to all clients */
+  updatePlatformPosition(position: { lat: number; lng: number }) {
+    if (!this.platform) return;
+    this.platform = { ...this.platform, position };
+    this.io.emit('platform:status', this.platform);
   }
 
   private async updateDrone(droneId: string) {

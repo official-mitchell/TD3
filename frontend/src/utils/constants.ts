@@ -2,9 +2,10 @@ export const PLATFORM_CONSTANTS = {
   EFFECTIVE_RANGE: 2000, // meters
   UPDATE_INTERVAL: 2000, // ms
   ROTATION_DURATION: 1000, // ms
+  /** Ras Laffan Industrial City, Qatar */
   DEFAULT_POSITION: {
-    lat: 37.7749,
-    lng: -122.4194,
+    lat: 25.905310475056915,
+    lng: 51.543824178558054,
     altitude: 0,
   },
 } as const;

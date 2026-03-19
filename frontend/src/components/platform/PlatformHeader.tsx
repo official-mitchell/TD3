@@ -5,7 +5,7 @@ export const PlatformHeader: React.FC = () => {
       <div className="flex gap-4 mt-2">
         <span className="px-2 py-1 bg-green-500 rounded text-sm">IDLE</span>
         <span>Kills Confirmed: 3</span>
-        <span>Lat: 37.7749° | Lng: -122.4194° | Heading: 317.8°</span>
+        <span>Lat: 25.9053° | Lng: 51.5438° | Heading: 317.8°</span>
       </div>
     </div>
   );

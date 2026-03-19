@@ -1,32 +1,77 @@
 /**
- * XM914E1 weapon platform marker with heading arrow. Per Implementation Plan 7.2.
+ * XM914E1 weapon platform marker. IFV base + turret on top, rotates to face selected target.
  */
 import React, { useMemo } from 'react';
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
+import { useUIStore } from '../../store/uiStore';
+import { calculateBearing } from '../../utils/calculations';
 import type { IWeaponPlatform } from '@td3/shared-types';
+import type { IDrone } from '@td3/shared-types';
 
-export const PlatformMarker: React.FC<{ platform: IWeaponPlatform }> = ({ platform }) => {
+import ifvImg from '../../assets/TD3 IFV.png';
+import turretImg from '../../assets/TD3 turret.png';
+
+const BASE_SIZE = 48;
+
+export const PlatformMarker: React.FC<{
+  platform: IWeaponPlatform;
+  targetDrone?: IDrone | null;
+}> = ({ platform, targetDrone }) => {
+  const weaponSize = useUIStore((s) => s.weaponSize);
+  const size = Math.round(BASE_SIZE * weaponSize);
+
+  const turretHeading = useMemo(() => {
+    if (targetDrone) {
+      const { degrees } = calculateBearing(platform.position, targetDrone.position);
+      return degrees;
+    }
+    return platform.heading;
+  }, [platform, targetDrone]);
+
   const icon = useMemo(
     () =>
       L.divIcon({
         className: 'td3-platform-marker',
         html: `
           <div style="
-            width: 32px; height: 32px;
-            transform: rotate(${platform.heading}deg);
+            position: relative;
+            width: ${size}px;
+            height: ${size}px;
             cursor: default;
           ">
-            <svg width="32" height="32" viewBox="0 0 32 32">
-              <circle cx="16" cy="16" r="14" fill="#00C853" stroke="#fff" stroke-width="2"/>
-              <path d="M16 6 L16 26 M14 8 L16 4 L18 8" stroke="#fff" stroke-width="2" fill="none"/>
-            </svg>
+            <img
+              src="${ifvImg}"
+              alt="IFV"
+              style="
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+              "
+            />
+            <img
+              src="${turretImg}"
+              alt="Turret"
+              style="
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                transform: rotate(${turretHeading}deg);
+                transform-origin: center center;
+              "
+            />
           </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
       }),
-    [platform.heading]
+    [size, turretHeading]
   );
 
   const pos: [number, number] = [platform.position.lat, platform.position.lng];

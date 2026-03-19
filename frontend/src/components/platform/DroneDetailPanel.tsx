@@ -35,7 +35,7 @@ export const DroneDetailPanel: React.FC = () => {
     );
   }
 
-  const center = platform?.position ?? { lat: 37.7749, lng: -122.4194 };
+  const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
   const distKm = calculateDistance(center, drone.position) / 1000;
   const { degrees, cardinal } = calculateBearing(center, drone.position);
   const threatPct = Math.round((drone.threatLevel ?? 0) * 100);

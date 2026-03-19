@@ -21,7 +21,7 @@ export const BottomBar: React.FC = () => {
   const log = useEngagementLogStore((s) => s.log);
   const [firing, setFiring] = useState(false);
 
-  const center = platform?.position ?? { lat: 37.7749, lng: -122.4194 };
+  const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
   const sortedIds = useMemo(
     () => useDroneStore.getState().getSortedByDistance(center.lat, center.lng).map((d) => d.droneId),
     [drones, platform]
@@ -50,7 +50,7 @@ export const BottomBar: React.FC = () => {
   return (
     <footer className="flex-shrink-0 w-full border-t border-[#1A3A5C] bg-[#0F1929]">
       <div className="flex items-center justify-between px-4 py-2 gap-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <button
             onClick={() => prevTarget(sortedIds)}
             disabled={navDisabled}

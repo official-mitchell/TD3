@@ -51,6 +51,9 @@ vi.mock('leaflet', () => ({
 
 vi.mock('leaflet/dist/leaflet.css', () => ({}));
 
+vi.mock('../../assets/TD3 IFV.png', () => ({ default: '/mock-ifv.png' }));
+vi.mock('../../assets/TD3 turret.png', () => ({ default: '/mock-turret.png' }));
+
 const PLATFORM: IWeaponPlatform = {
   position: { lat: 37.7749, lng: -122.4194 },
   heading: 0,

@@ -6,9 +6,11 @@ import React, { useMemo } from 'react';
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { useTargetStore } from '../../store/targetStore';
+import { useUIStore } from '../../store/uiStore';
 import type { IDrone } from '@td3/shared-types';
 import { PULSE_RING_HTML } from './TargetLockRing';
 
+const BASE_SIZE = 24;
 const STATUS_COLORS: Record<string, string> = {
   Detected: '#6B7280',
   Identified: '#EAB308',
@@ -23,6 +25,8 @@ export const DroneMarker: React.FC<{ drone: IDrone; isSelected: boolean }> = ({
   isSelected,
 }) => {
   const setSelected = useTargetStore((s) => s.setSelected);
+  const droneSize = useUIStore((s) => s.droneSize);
+  const size = Math.round(BASE_SIZE * droneSize);
 
   const icon = useMemo(
     () => {
@@ -32,7 +36,7 @@ export const DroneMarker: React.FC<{ drone: IDrone; isSelected: boolean }> = ({
         html: `
           <div style="position: relative; cursor: pointer;">
             ${isSelected ? PULSE_RING_HTML : ''}
-            <svg width="24" height="24" viewBox="0 0 24 24" style="
+            <svg width="${size}" height="${size}" viewBox="0 0 24 24" style="
               transform: rotate(${drone.heading}deg);
               filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
             ">
@@ -40,11 +44,11 @@ export const DroneMarker: React.FC<{ drone: IDrone; isSelected: boolean }> = ({
             </svg>
           </div>
         `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
       });
     },
-    [drone.status, drone.heading, isSelected]
+    [drone.status, drone.heading, isSelected, size]
   );
 
   const pos: [number, number] = [drone.position.lat, drone.position.lng];

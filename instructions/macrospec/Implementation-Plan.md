@@ -617,25 +617,25 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 ### 11.1 Layout
 
-11.1.1. Left zone: the text `TD3` in `primary.main` color at `1.2rem` bold monospace, followed by the full title `TACTICAL DRONE DEFENSE DASHBOARD` in `text.secondary` at small caps styling.
+- [x] 11.1.1. Left zone: the text `TD3` in `primary.main` color at `1.2rem` bold monospace, followed by the full title `TACTICAL DRONE DEFENSE DASHBOARD` in `text.secondary` at small caps styling.
 
-11.1.2. Right zone: the connection status badge, then on mobile viewports the drawer toggle buttons for the left and right panels.
+- [x] 11.1.2. Right zone: the connection status badge, then on mobile viewports the drawer toggle buttons for the left and right panels.
 
 ### 11.2 Connection status badge
 
-11.2.1. Read `status` from `useConnectionStore`.
+- [x] 11.2.1. Read `status` from `useConnectionStore`.
 
-11.2.2. Render a filled circle `●` colored by status: `#00C853` for `Connected`, `#FFB300` for `Degraded`, `#FF1744` for `Offline`. Follow it with the status string in uppercase.
+- [x] 11.2.2. Render a filled circle `●` colored by status: `#00C853` for `Connected`, `#FFB300` for `Degraded`, `#FF1744` for `Offline`. Follow it with the status string in uppercase.
 
-11.2.3. When `Degraded`, apply a CSS blink animation to the circle at 1-second intervals.
+- [x] 11.2.3. When `Degraded`, apply a CSS blink animation to the circle at 1-second intervals.
 
 ### 11.3 Acceptance criteria
 
-11.3.1. Header renders across the full viewport width at all breakpoints.
+- [x] 11.3.1. Header renders across the full viewport width at all breakpoints.
 
-11.3.2. Connection badge updates in real-time without page interaction.
+- [x] 11.3.2. Connection badge updates in real-time without page interaction.
 
-11.3.3. On mobile, drawer toggle buttons are visible and functional.
+- [x] 11.3.3. On mobile, drawer toggle buttons are visible and functional.
 
 ---
 
@@ -646,11 +646,11 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 ### 12.1 Install dependencies
 
-12.1.1. Install `d3` as a production dependency and `@types/d3` as a dev dependency.
+- [x] 12.1.1. Install `d3` as a production dependency and `@types/d3` as a dev dependency.
 
 ### 12.2 File structure
 
-12.2.1. Create the following files under `apps/frontend/src/components/gauges/`:
+- [x] 12.2.1. Create the following files under `apps/frontend/src/components/gauges/`:
   - `SpeedGauge.tsx`
   - `AltitudeBar.tsx`
   - `ThreatMeter.tsx`
@@ -658,31 +658,48 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 ### 12.3 D3 component pattern
 
-12.3.1. Every gauge component follows the same pattern: it holds a `ref` to an `SVGSVGElement`, runs all D3 drawing logic inside a `useEffect` that depends on the incoming `value` prop, begins the effect by calling `d3.select(svgRef.current).selectAll('*').remove()` to clear the previous render, then redraws from scratch.
+- [x] 12.3.1. Every gauge component follows the same pattern: it holds a `ref` to an `SVGSVGElement`, runs all D3 drawing logic inside a `useEffect` that depends on the incoming `value` prop, begins the effect by calling `d3.select(svgRef.current).selectAll('*').remove()` to clear the previous render, then redraws from scratch.
 
-12.3.2. React owns the data binding and the component lifecycle. D3 owns only the SVG drawing. Do not let D3 manage component mount or unmount.
+- [x] 12.3.2. React owns the data binding and the component lifecycle. D3 owns only the SVG drawing. Do not let D3 manage component mount or unmount.
 
 ### 12.4 Gauge specifications
 
-12.4.1. `SpeedGauge` renders a D3 arc from 0° to 180° (semicircle). The filled arc spans proportionally from `0` to `value / max` where `max` defaults to `300` km/h. The fill color transitions from `#00C853` at zero to `#EAB308` at midrange to `#EF4444` at maximum using `d3.interpolateRgb`. Label: `{value} KM/H` centered below the arc.
+- [x] 12.4.1. `SpeedGauge` renders a D3 arc from 0° to 180° (semicircle). The filled arc spans proportionally from `0` to `value / max` where `max` defaults to `300` km/h. The fill color transitions from `#00C853` at zero to `#EAB308` at midrange to `#EF4444` at maximum using `d3.interpolateRgb`. Label: `{value} KM/H` centered below the arc.
 
-12.4.2. `AltitudeBar` renders a vertical rectangle. Its filled height is proportional to `value / 1000` where 1000m is the maximum. Fill color is `#1E90FF`. Label: `{value}M` above the bar.
+- [x] 12.4.2. `AltitudeBar` renders a vertical rectangle. Its filled height is proportional to `value / 1000` where 1000m is the maximum. Fill color is `#1E90FF`. Label: `{value}M` above the bar.
 
-12.4.3. `ThreatMeter` renders a horizontal rectangle. Its filled width is proportional to the `value` (0.0 to 1.0). Fill color is interpolated using `d3.interpolateRgb('#00C853', '#FF1744')(value)`. Label: `THREAT {(value * 100).toFixed(0)}%` to the right of the bar.
+- [x] 12.4.3. `ThreatMeter` renders a horizontal rectangle. Its filled width is proportional to the `value` (0.0 to 1.0). Fill color is interpolated using `d3.interpolateRgb('#00C853', '#FF1744')(value)`. Label: `THREAT {(value * 100).toFixed(0)}%` to the right of the bar.
 
-12.4.4. `EngagementProbability` computes `probability = (1 - distanceMeters / 2000) * 0.85`, clamped to `[0, 1]`. Renders the probability as a large bold percentage and a small arc gauge. Color is red when below `0.5`, amber between `0.5` and `0.75`, green above `0.75`. Label: `ENG. PROB`.
+- [x] 12.4.4. `EngagementProbability` computes `probability = (1 - distanceMeters / 2000) * 0.85`, clamped to `[0, 1]`. Renders the probability as a large bold percentage and a small arc gauge. Color is red when below `0.5`, amber between `0.5` and `0.75`, green above `0.75`. Label: `ENG. PROB`.
 
 ### 12.5 Placement
 
-12.5.1. Render all four gauges stacked vertically at the bottom of `TargetPanel`, visible only when `selectedDroneId` is non-null.
+- [x] 12.5.1. Render all four gauges stacked vertically at the bottom of `TargetPanel`, visible only when `selectedDroneId` is non-null.
 
 ### 12.6 Acceptance criteria
 
-12.6.1. Selecting a drone causes all four gauges to render with the drone's current values.
+- [x] 12.6.1. Selecting a drone causes all four gauges to render with the drone's current values.
 
-12.6.2. As telemetry updates arrive (speed and altitude changing), the D3 arcs and bars re-render with updated values. No full component remount occurs — only the inner SVG content is cleared and redrawn.
+- [x] 12.6.2. As telemetry updates arrive (speed and altitude changing), the D3 arcs and bars re-render with updated values. No full component remount occurs — only the inner SVG content is cleared and redrawn.
 
-12.6.3. Deselecting the drone (or drone being destroyed) causes all gauges to unmount cleanly with no console errors.
+- [x] 12.6.3. Deselecting the drone (or drone being destroyed) causes all gauges to unmount cleanly with no console errors.
+
+
+---
+
+## Frontend Fixes:
+
+- [ ] allow me to press cmd + enter (on Mac) to fire the turret; different on PC — let's detect the user's device settings
+- [ ] slow down swivels so it takes a little bit of time to reposition
+- [ ] show distance between the turret and the drone as a stat on the line between vehicle and the drone
+- [ ] allow me to click off the drone to deselect that target.
+- [ ] tether sounds to animation
+- [ ] swivel turret by 15 degrees clockwise
+- [ ] create tracer rounds that match the amount count when they hit the drones
+- [ ] create animation for landing hits and missed shots (show the rounds missing the target) and create little X's when they miss (assume they land behind the drone in some way)
+- [ ] create a range accuracy gradient cone away from the vehicle
+
+
 
 ---
 
@@ -1190,3 +1207,7 @@ td3/
 | 2026-03-19 | **Step 10.1–10.3 Bottom Bar:** BottomBar: 10.1.1 layout (PREV, target label, NEXT, FIRE), 10.1.2 engagement log feed (last 10, HH:mm:ss, droneId → outcome ✓/✗). 10.2: canFire (Engagement Ready + !firing + platform.isActive), FIRE pulse glow, NO TARGET when disabled, ENGAGING… amber when firing. 10.3: handler with socket check, 350ms timeout. useSocket: drone:destroyed calls nextTarget after remove. PREV/NEXT disabled when sortedIds.length &lt; 2. LogPanel: wired to engagementLogStore, removed mock data and Update Log. Deleted LogEntries.tsx. Added fire-pulse-glow keyframe. |
 | 2026-03-19 | **Step 10.4–10.5:** Marked 10.4.1–10.4.4 and 10.5.1–10.5.2 complete (already implemented). Added BottomBar tests for 10.4.2/10.4.3 (PREV/NEXT change selection) and 10.5.2 (log entry format ✓/✗). |
 | 2026-03-19 | **Step 10.6 acceptance criteria tests:** BottomBar.spec.tsx for 10.6.1 (FIRE disabled/labeled NO TARGET), 10.6.2 (FIRE activates with fire-pulse when Engagement Ready), 10.6.3 (emit engagement:fire, ENGAGING… ~350ms), 10.6.4 (appendLog→log feed), 10.6.5 (remove+nextTarget→auto-advance), 10.6.6 (Next/Prev wrap). All 13 BottomBar tests pass. |
+| 2026-03-19 | **Step 11.1–11.3 Header and connection badge:** Rewrote Header.tsx per 11.1 (left: TD3 primary.main + TACTICAL DRONE DEFENSE DASHBOARD text.secondary; right: connection badge + drawer toggles on mobile). 11.2: status from useConnectionStore, ● colored #00C853/#FFB300/#FF1744, Degraded blink. 11.3: full width, real-time badge, mobile drawer toggles. DashboardView passes isMobile and onOpenLeftPanel/onOpenRightPanel to Header. Header.spec.tsx for 11.1–11.3. Removed Navbar from Header. |
+| 2026-03-19 | **LocationPicker positioning and tests:** Fixed LocationPicker rendering behind Leaflet map (z-index 50 < Leaflet ~700). Renders via createPortal to document.body with z-index 9999. Added p-4 padding for small screens. LocationPicker.spec.tsx: overlay z-index ≥9999, portal to body, backdrop/modal click behavior, Cancel/Apply. DashboardView.spec.tsx: integration test—open hamburger → Change location → overlay z-index > 700. Header.spec.tsx: removed connection badge tests (badge removed in hamburger redesign). |
+| 2026-03-19 | **Step 12.1–12.5 D3 Telemetry Gauges:** Installed d3 and @types/d3. Created SpeedGauge, AltitudeBar, ThreatMeter, EngagementProbability in frontend/src/components/gauges/. All follow 12.3 pattern (ref, useEffect, clear+redraw). SpeedGauge: semicircle arc, green→amber→red. AltitudeBar: vertical bar, #1E90FF. ThreatMeter: horizontal bar, green→red. EngagementProbability: (1−d/2000)*0.85, red/amber/green. TelemetryGauges composes all four. TargetPanel renders gauges at bottom when selectedDroneId non-null. |
+| 2026-03-19 | **Step 12.6 acceptance criteria tests:** TargetPanel.spec.tsx for 12.6.1 (all four gauges render with drone values), 12.6.2 (telemetry update→gauges re-render), 12.6.3 (deselect/destroyed→gauges unmount). All 13 TargetPanel tests pass. |

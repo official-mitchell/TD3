@@ -89,7 +89,7 @@ export const PriorityTargetList: React.FC = () => {
   const selectedDroneId = useTargetStore((s) => s.selectedDroneId);
   const setSelected = useTargetStore((s) => s.setSelected);
 
-  const center = platform?.position ?? { lat: 37.7749, lng: -122.4194 };
+  const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
   const targets = useMemo(
     () => (platform ? useDroneStore.getState().getSortedByDistance(center.lat, center.lng) : []),
     [drones, platform]

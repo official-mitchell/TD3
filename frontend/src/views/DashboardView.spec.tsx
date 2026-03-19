@@ -1,19 +1,31 @@
 /**
  * DashboardView tests. Ensures sidebars have overflow-x-hidden and no horizontal scrollbar.
+ * Integration: LocationPicker renders in front of map when opened.
  */
-import { vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { DashboardView } from './DashboardView';
 
 vi.mock('@components/map/MapContainer', () => ({
-  MapContainer: () => <div data-testid="map-container">Map</div>,
+  MapContainer: () => (
+    <div data-testid="map-container" className="leaflet-container">
+      <div className="leaflet-pane leaflet-popup-pane" style={{ zIndex: 700 }} />
+    </div>
+  ),
 }));
 
 vi.mock('@mui/material/useMediaQuery', () => ({
   default: () => false,
 }));
 
+vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })));
+
 describe('DashboardView', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })));
+  });
+
   it('should render without crashing', () => {
     render(<DashboardView />);
     expect(screen.getByTestId('map-container')).toBeTruthy();
@@ -29,5 +41,23 @@ describe('DashboardView', () => {
     const { container } = render(<DashboardView />);
     const flexShrinkElements = container.querySelectorAll('.flex-shrink-0');
     expect(flexShrinkElements.length).toBeGreaterThan(0);
+  });
+
+  it('LocationPicker renders in front of map when opened via hamburger menu', async () => {
+    render(<DashboardView />);
+    const mapContainer = screen.getByTestId('map-container');
+    expect(mapContainer).toBeTruthy();
+
+    const hamburger = screen.getByLabelText('Settings');
+    fireEvent.click(hamburger);
+
+    const changeLocationItem = screen.getByText('Change location…');
+    fireEvent.click(changeLocationItem);
+
+    const overlay = screen.getByTestId('location-picker-overlay');
+    expect(overlay).toBeTruthy();
+    const overlayZ = Number(window.getComputedStyle(overlay).zIndex);
+    expect(overlayZ).toBeGreaterThan(700);
+    expect(overlay.parentElement).toBe(document.body);
   });
 });

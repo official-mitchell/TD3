@@ -2,7 +2,7 @@ import React from 'react';
 
 export const TD3Logo: React.FC = () => {
   return (
-    <div className="flex items-center">
+    <div className="flex items-center" data-testid="td3-logo">
       <svg
         id="Layer_2"
         data-name="Layer 2"

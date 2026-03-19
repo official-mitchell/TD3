@@ -1,9 +1,9 @@
 /**
  * Leaflet map container. Per Implementation Plan 7.
  * Platform marker, drone markers, range circles, line of fire.
- * Vite icon fix applied for default Leaflet markers.
+ * Loading overlay: 10-segment bar centered over map, fades out at 100%.
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer as LeafletMap, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -26,9 +26,59 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-const DEFAULT_CENTER: [number, number] = [37.7749, -122.4194];
+/** Ras Laffan Industrial City, Qatar */
+const DEFAULT_CENTER: [number, number] = [25.905310475056915, 51.543824178558054];
 const DEFAULT_ZOOM = 14;
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const LOADING_SEGMENTS = 10;
+
+const PlatformLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => {
+  const [filled, setFilled] = useState(0);
+  const [fadeOut, setFadeOut] = useState(false);
+  const [hide, setHide] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    setHide(false);
+    setFadeOut(false);
+    setFilled(0);
+    const interval = setInterval(() => {
+      setFilled((f) => {
+        if (f >= LOADING_SEGMENTS - 1) {
+          clearInterval(interval);
+          setFadeOut(true);
+          setTimeout(() => setHide(true), 250);
+          return LOADING_SEGMENTS;
+        }
+        return f + 1;
+      });
+    }, 120);
+    return () => clearInterval(interval);
+  }, [visible]);
+
+  if (!visible || hide) return null;
+
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1000]"
+      aria-hidden
+    >
+      <div
+        className={`flex gap-0.5 px-4 py-3 rounded-lg bg-[#0F1929]/90 border border-[#1A3A5C] transition-opacity duration-200 ${
+          fadeOut ? 'opacity-0' : 'opacity-100'
+        }`}
+      >
+        {Array.from({ length: LOADING_SEGMENTS }, (_, i) => (
+          <div
+            key={i}
+            className="w-3 h-5 rounded-sm transition-colors duration-100"
+            style={{ backgroundColor: i < filled ? '#1E90FF' : '#1A3A5C' }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const ChangeCenter: React.FC<{ center: [number, number] }> = ({ center }) => {
   const map = useMap();
@@ -56,7 +106,7 @@ const MapContent: React.FC = () => {
       {platform && (
         <>
           <RangeCircles platform={platform} />
-          <PlatformMarker platform={platform} />
+          <PlatformMarker platform={platform} targetDrone={selectedDrone} />
         </>
       )}
       {platform && selectedDrone && (
@@ -79,8 +129,11 @@ export const MapContainer: React.FC = () => {
     ? [platform.position.lat, platform.position.lng]
     : DEFAULT_CENTER;
 
+  const platformLoading = platform === null;
+
   return (
-    <div className="h-full w-full bg-[#0F1929] min-h-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:rounded-none">
+    <div className="relative h-full w-full bg-[#0F1929] min-h-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:rounded-none">
+      <PlatformLoadingOverlay visible={platformLoading} />
       <LeafletMap
         center={center}
         zoom={DEFAULT_ZOOM}
