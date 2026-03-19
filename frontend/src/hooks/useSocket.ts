@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useDroneStore } from '../store/droneStore';
 import { usePlatformStore } from '../store/platformStore';
+import { useTargetStore } from '../store/targetStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { useEngagementLogStore } from '../store/engagementLogStore';
 import type { IDrone, IWeaponPlatform, IEngagementRecord } from '@td3/shared-types';
@@ -94,6 +95,13 @@ export const useSocket = () => {
 
     socket.on('drone:destroyed', (payload: { droneId: string }) => {
       droneStore.removeDrone(payload.droneId);
+      const platform = platformStore.platform;
+      const center = platform?.position ?? { lat: 37.7749, lng: -122.4194 };
+      const sortedIds = useDroneStore
+        .getState()
+        .getSortedByDistance(center.lat, center.lng)
+        .map((d) => d.droneId);
+      useTargetStore.getState().nextTarget(sortedIds);
     });
 
     socket.on('drone:hit', (payload: { droneId: string; timestamp?: string }) => {

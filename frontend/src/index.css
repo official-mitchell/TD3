@@ -22,3 +22,29 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* 8.5.3: Degraded connection status blink at 1-second intervals */
+@keyframes connection-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* 10.2.2: FIRE button pulse glow at 1-second intervals when canFire */
+@keyframes fire-pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.9);
+  }
+}
+
+.fire-pulse {
+  animation: fire-pulse-glow 1s ease-in-out infinite;
+}

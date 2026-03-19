@@ -1,11 +1,14 @@
 /**
  * Drone store — Map<string, IDrone> keyed by droneId.
  * Phase 3.2: Immer middleware, updateDrone, removeDrone, clearDrones, getSortedByDistance.
- * Per Implementation Plan 3.2. Never iterate Map directly in JSX; use Array.from(drones.values()).
+ * Per Implementation Plan 3.2. enableMapSet() required for Immer Map support.
  */
+import { enableMapSet } from 'immer';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+
+enableMapSet();
 import type { IDrone } from '@td3/shared-types';
 import { calculateDistance } from '../utils/calculations';
 

@@ -1,14 +1,20 @@
 /**
- * Target panel (left sidebar). Per Implementation Plan 6.2.4.
- * Contains PriorityTargetPanel. 280px width, overflow-y auto.
+ * Target panel. Per Implementation Plan 9.1–9.2.
+ * Contains PriorityTargetList (9.1) and DroneDetailPanel (9.2).
  */
 import React from 'react';
-import { PriorityTargetPanel } from '@components/platform/PriorityTargetPanel';
+import { PriorityTargetList } from '@components/platform/PriorityTargetList';
+import { DroneDetailPanel } from '@components/platform/DroneDetailPanel';
 
 export const TargetPanel: React.FC = () => {
   return (
-    <div className="h-full p-4 min-w-0 overflow-x-hidden">
-      <PriorityTargetPanel />
+    <div className="h-full flex flex-col gap-4 p-4 min-w-0 overflow-x-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <PriorityTargetList />
+      </div>
+      <div className="flex-shrink-0 min-h-0">
+        <DroneDetailPanel />
+      </div>
     </div>
   );
 };

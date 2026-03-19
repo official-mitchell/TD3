@@ -446,57 +446,57 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 ### 8.1 Data bindings
 
-8.1.1. Read `platform` from `usePlatformStore`.
+- [x] 8.1.1. Read `platform` from `usePlatformStore`.
 
-8.1.2. Read `status` and `lastHeartbeat` from `useConnectionStore`.
+- [x] 8.1.2. Read `status` and `lastHeartbeat` from `useConnectionStore`.
 
-8.1.3. Read `drones` from `useDroneStore` to compute per-status counts.
+- [x] 8.1.3. Read `drones` from `useDroneStore` to compute per-status counts.
 
-8.1.4. Read `log` from `useEngagementLogStore` for the total engagement count.
+- [x] 8.1.4. Read `log` from `useEngagementLogStore` for the total engagement count.
 
 ### 8.2 System block
 
-8.2.1. Render `XM914E1` as the weapon system identifier. This value is hardcoded — it is a display label, not data from the API.
+- [x] 8.2.1. Render `XM914E1` as the weapon system identifier. This value is hardcoded — it is a display label, not data from the API.
 
-8.2.2. Render `3rd Marine Brigade` as the unit label. Also hardcoded.
+- [x] 8.2.2. Render `3rd Marine Brigade` as the unit label. Also hardcoded.
 
-8.2.3. Render a turret status badge. The badge reads `OPERATIONAL` in green when `platform.isActive` is true and `platform.ammoCount >= 50`. It reads `LOW AMMO` in amber when `ammoCount < 50`. It reads `OFFLINE` in red when `platform.isActive` is false or `platform` is null.
+- [x] 8.2.3. Render a turret status badge. The badge reads `OPERATIONAL` in green when `platform.isActive` is true and `platform.ammoCount >= 50`. It reads `LOW AMMO` in amber when `ammoCount < 50`. It reads `OFFLINE` in red when `platform.isActive` is false or `platform` is null.
 
 ### 8.3 Position block
 
-8.3.1. Render `LAT:` followed by `platform.position.lat` formatted to four decimal places.
+- [x] 8.3.1. Render `LAT:` followed by `platform.position.lat` formatted to four decimal places.
 
-8.3.2. Render `LNG:` followed by `platform.position.lng` formatted to four decimal places.
+- [x] 8.3.2. Render `LNG:` followed by `platform.position.lng` formatted to four decimal places.
 
-8.3.3. Render `HDG:` followed by `platform.heading` formatted to one decimal place, suffixed with `°`.
+- [x] 8.3.3. Render `HDG:` followed by `platform.heading` formatted to one decimal place, suffixed with `°`.
 
 ### 8.4 Engagement statistics
 
-8.4.1. Render the following four counters, each derived by filtering `Array.from(drones.values())`:
+- [x] 8.4.1. Render the following four counters, each derived by filtering `Array.from(drones.values())`:
   - `DETECTED:` count of drones with status `Detected`
   - `IDENTIFIED:` count with status `Identified`
   - `CONFIRMED:` count with status `Confirmed` or `Engagement Ready`
   - `KILLS:` `platform.killCount`
 
-8.4.2. Render `AMMO:` followed by `platform.ammoCount` with a visual indication (amber color) when below 50.
+- [x] 8.4.2. Render `AMMO:` followed by `platform.ammoCount` with a visual indication (amber color) when below 50.
 
 ### 8.5 Connection status badge
 
-8.5.1. Render a filled circle indicator followed by the connection status string.
+- [x] 8.5.1. Render a filled circle indicator followed by the connection status string.
 
-8.5.2. Color the dot: `#00C853` for `Connected`, `#FFB300` for `Degraded`, `#FF1744` for `Offline`.
+- [x] 8.5.2. Color the dot: `#00C853` for `Connected`, `#FFB300` for `Degraded`, `#FF1744` for `Offline`.
 
-8.5.3. When status is `Degraded`, apply a CSS blink animation to the dot at 1-second intervals.
+- [x] 8.5.3. When status is `Degraded`, apply a CSS blink animation to the dot at 1-second intervals.
 
-8.5.4. When status is `Offline`, compute elapsed seconds since `lastHeartbeat` using `Date.now() - lastHeartbeat` divided by 1000, rounded down. Display as `LAST CONTACT: {n}s ago`. Update this display every second using a `setInterval` inside a `useEffect`.
+- [x] 8.5.4. When status is `Offline`, compute elapsed seconds since `lastHeartbeat` using `Date.now() - lastHeartbeat` divided by 1000, rounded down. Display as `LAST CONTACT: {n}s ago`. Update this display every second using a `setInterval` inside a `useEffect`.
 
 ### 8.6 Acceptance criteria
 
-8.6.1. All fields populate with real data within 5 seconds of app load.
+- [x] 8.6.1. All fields populate with real data within 5 seconds of app load.
 
-8.6.2. Shutting down the backend causes the status badge to transition to `Offline` and the elapsed-seconds counter to start incrementing.
+- [x] 8.6.2. Shutting down the backend causes the status badge to transition to `Offline` and the elapsed-seconds counter to start incrementing.
 
-8.6.3. After a `drone:hit` engagement, `KILLS` increments and `AMMO` decrements without a page reload.
+- [x] 8.6.3. After a `drone:hit` engagement, `KILLS` increments and `AMMO` decrements without a page reload.
 
 ---
 
@@ -507,41 +507,41 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 ### 9.1 `PriorityTargetList`
 
-9.1.1. Retrieve the sorted target array by calling `useDroneStore(s => s.getSortedByDistance(...))` with the platform's current lat/lng. If `platform` is null, render an empty list.
+- [x] 9.1.1. Retrieve the sorted target array by calling `useDroneStore(s => s.getSortedByDistance(...))` with the platform's current lat/lng. If `platform` is null, render an empty list.
 
-9.1.2. Render each drone as a clickable card. Clicking the card calls `targetStore.setSelected(drone.droneId)`.
+- [x] 9.1.2. Render each drone as a clickable card. Clicking the card calls `targetStore.setSelected(drone.droneId)`.
 
-9.1.3. Each card displays: the drone ID in bold, drone type in secondary text, a color-coded status badge, distance formatted as `DIST: {n}km` to two decimal places, bearing as `BRG: {n}°`, altitude as `ALT: {n}m`, speed as `SPD: {n} km/h`, and a threat percentage bar reading `THREAT: {n}%`.
+- [x] 9.1.3. Each card displays: the drone ID in bold, drone type in secondary text, a color-coded status badge, distance formatted as `DIST: {n}km` to two decimal places, bearing as `BRG: {n}°`, altitude as `ALT: {n}m`, speed as `SPD: {n} km/h`, and a threat percentage bar reading `THREAT: {n}%`.
 
-9.1.4. The threat percentage bar color is green when below 40%, amber between 40% and 70%, and red above 70%.
+- [x] 9.1.4. The threat percentage bar color is green when below 40%, amber between 40% and 70%, and red above 70%.
 
-9.1.5. Cards are numbered `1`, `2`, `3` in order of distance from the platform.
+- [x] 9.1.5. Cards are numbered `1`, `2`, `3` in order of distance from the platform.
 
-9.1.6. The selected card renders with a `2px solid` border using `primary.main` (`#1E90FF`). All other cards render with the default paper border.
+- [x] 9.1.6. The selected card renders with a `2px solid` border using `primary.main` (`#1E90FF`). All other cards render with the default paper border.
 
-9.1.7. **Bug fix note:** The distance and bearing values displayed on the card must be computed client-side from the drone's current `position` and the platform's `position`. Do not rely solely on a stale backend-sent distance field, as position updates faster than distance fields may be recalculated.
+- [x] 9.1.7. **Bug fix note:** The distance and bearing values displayed on the card must be computed client-side from the drone's current `position` and the platform's `position`. Do not rely solely on a stale backend-sent distance field, as position updates faster than distance fields may be recalculated.
 
 ### 9.2 `DroneDetailPanel`
 
-9.2.1. Read `selectedDroneId` from `useTargetStore`. Look up the corresponding `IDrone` from `useDroneStore`.
+- [x] 9.2.1. Read `selectedDroneId` from `useTargetStore`. Look up the corresponding `IDrone` from `useDroneStore`.
 
-9.2.2. When `selectedDroneId` is null or no matching drone is found in the store, render the text `NO TARGET SELECTED` centered in the panel.
+- [x] 9.2.2. When `selectedDroneId` is null or no matching drone is found in the store, render the text `NO TARGET SELECTED` centered in the panel.
 
-9.2.3. When a drone is found, render: drone ID, drone type, status badge, an `✓ WITHIN ENGAGEMENT RANGE` indicator (visible only when `status === 'Engagement Ready'`), distance from platform, bearing, altitude, speed, threat level, raw lat/lng position, and last updated timestamp formatted as a human-readable time.
+- [x] 9.2.3. When a drone is found, render: drone ID, drone type, status badge, an `✓ WITHIN ENGAGEMENT RANGE` indicator (visible only when `status === 'Engagement Ready'`), distance from platform, bearing, altitude, speed, threat level, raw lat/lng position, and last updated timestamp formatted as a human-readable time.
 
-9.2.4. **Selection persistence:** The detail panel must not lose its displayed drone when a `drone:update` WebSocket event arrives. Because `targetStore` is a separate Zustand slice from `droneStore`, and `updateDrone` in `droneStore` never touches `targetStore.selectedDroneId`, the selection persists automatically. If selection is resetting unexpectedly, audit that `selectedDroneId` is not stored inside `droneStore`.
+- [x] 9.2.4. **Selection persistence:** The detail panel must not lose its displayed drone when a `drone:update` WebSocket event arrives. Because `targetStore` is a separate Zustand slice from `droneStore`, and `updateDrone` in `droneStore` never touches `targetStore.selectedDroneId`, the selection persists automatically. If selection is resetting unexpectedly, audit that `selectedDroneId` is not stored inside `droneStore`.
 
 ### 9.3 Acceptance criteria
 
-9.3.1. The target list renders cards for all `Confirmed` and `Engagement Ready` drones only. `Detected` and `Identified` drones do not appear in the list.
+- [x] 9.3.1. The target list renders cards for all `Confirmed` and `Engagement Ready` drones only. `Detected` and `Identified` drones do not appear in the list.
 
-9.3.2. Cards are sorted by ascending distance to the platform and numbered correctly.
+- [x] 9.3.2. Cards are sorted by ascending distance to the platform and numbered correctly.
 
-9.3.3. Clicking a card highlights it with a blue border and populates the detail panel.
+- [x] 9.3.3. Clicking a card highlights it with a blue border and populates the detail panel.
 
-9.3.4. The detail panel values (distance, speed, altitude) update in real-time as telemetry arrives, without the card losing its selection highlight or the detail panel clearing.
+- [x] 9.3.4. The detail panel values (distance, speed, altitude) update in real-time as telemetry arrives, without the card losing its selection highlight or the detail panel clearing.
 
-9.3.5. When a drone is destroyed and removed from the store, the detail panel falls back to the `NO TARGET SELECTED` state. The next closest drone in the list is not automatically selected — that happens via the bottom bar's auto-advance logic in Step 10.
+- [x] 9.3.5. When a drone is destroyed and removed from the store, the detail panel falls back to the `NO TARGET SELECTED` state. The next closest drone in the list is not automatically selected — that happens via the bottom bar's auto-advance logic in Step 10.
 
 ---
 
@@ -552,61 +552,61 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 ### 10.1 Layout
 
-10.1.1. The bottom bar is a single horizontal row containing, left to right: the `← PREV` button, a center display showing the current target label, the `NEXT →` button, and the FIRE button on the far right.
+- [x] 10.1.1. The bottom bar is a single horizontal row containing, left to right: the `← PREV` button, a center display showing the current target label, the `NEXT →` button, and the FIRE button on the far right.
 
-10.1.2. Below or adjacent to the controls, render the last 10 entries of `engagementLogStore.log` as a compact scrollable feed.
+- [x] 10.1.2. Below or adjacent to the controls, render the last 10 entries of `engagementLogStore.log` as a compact scrollable feed.
 
 ### 10.2 FIRE button states
 
-10.2.1. Derive `canFire` as true when all three conditions are met: the selected drone's status is `Engagement Ready`, the component is not in the `firing` state, and `platform.isActive` is true.
+- [x] 10.2.1. Derive `canFire` as true when all three conditions are met: the selected drone's status is `Engagement Ready`, the component is not in the `firing` state, and `platform.isActive` is true.
 
-10.2.2. When `canFire` is true, render the button with a red background, label `FIRE ({platform.ammoCount})`, and a repeating pulse glow CSS animation using `box-shadow` at 1-second intervals.
+- [x] 10.2.2. When `canFire` is true, render the button with a red background, label `FIRE ({platform.ammoCount})`, and a repeating pulse glow CSS animation using `box-shadow` at 1-second intervals.
 
-10.2.3. When `canFire` is false, render the button with a muted gray background and the label `NO TARGET`. The button must have the HTML `disabled` attribute set.
+- [x] 10.2.3. When `canFire` is false, render the button with a muted gray background and the label `NO TARGET`. The button must have the HTML `disabled` attribute set.
 
-10.2.4. When the `firing` state is true (immediately after FIRE is pressed and before the 350ms timeout resolves), render the button with an amber background and the label `ENGAGING...`. The button must be disabled during this window.
+- [x] 10.2.4. When the `firing` state is true (immediately after FIRE is pressed and before the 350ms timeout resolves), render the button with an amber background and the label `ENGAGING...`. The button must be disabled during this window.
 
 ### 10.3 FIRE button handler
 
-10.3.1. On click, verify `canFire` is true and a socket ref is available. If not, return without action.
+- [x] 10.3.1. On click, verify `canFire` is true and a socket ref is available. If not, return without action.
 
-10.3.2. Set local `firing` state to true.
+- [x] 10.3.2. Set local `firing` state to true.
 
-10.3.3. Emit `engagement:fire` on the socket with `droneId` equal to `selectedDroneId` and `timestamp` equal to the current ISO 8601 time.
+- [x] 10.3.3. Emit `engagement:fire` on the socket with `droneId` equal to `selectedDroneId` and `timestamp` equal to the current ISO 8601 time.
 
-10.3.4. After 350ms, set `firing` back to false. The backend will handle the actual result and emit the outcome event.
+- [x] 10.3.4. After 350ms, set `firing` back to false. The backend will handle the actual result and emit the outcome event.
 
-10.3.5. When `drone:destroyed` is received (handled in `useSocket`), the drone is removed from `droneStore`. The bottom bar should then automatically advance to the next target: call `targetStore.nextTarget(sortedIds)` inside the `drone:destroyed` handler after the drone is removed from the store.
+- [x] 10.3.5. When `drone:destroyed` is received (handled in `useSocket`), the drone is removed from `droneStore`. The bottom bar should then automatically advance to the next target: call `targetStore.nextTarget(sortedIds)` inside the `drone:destroyed` handler after the drone is removed from the store.
 
 ### 10.4 Next and Previous navigation
 
-10.4.1. Read the sorted target ID array by calling `useDroneStore(s => s.getSortedByDistance(...)).map(d => d.droneId)`.
+- [x] 10.4.1. Read the sorted target ID array by calling `useDroneStore(s => s.getSortedByDistance(...)).map(d => d.droneId)`.
 
-10.4.2. The `← PREV` button calls `targetStore.prevTarget(sortedIds)`.
+- [x] 10.4.2. The `← PREV` button calls `targetStore.prevTarget(sortedIds)`.
 
-10.4.3. The `NEXT →` button calls `targetStore.nextTarget(sortedIds)`.
+- [x] 10.4.3. The `NEXT →` button calls `targetStore.nextTarget(sortedIds)`.
 
-10.4.4. Both buttons render as disabled when `sortedIds` has fewer than two entries.
+- [x] 10.4.4. Both buttons render as disabled when `sortedIds` has fewer than two entries.
 
 ### 10.5 Engagement log feed
 
-10.5.1. Read `log` from `useEngagementLogStore`. Display the first 10 entries.
+- [x] 10.5.1. Read `log` from `useEngagementLogStore`. Display the first 10 entries.
 
-10.5.2. Each entry renders: timestamp formatted as `HH:MM:SS`, drone ID, an arrow `→`, and the outcome with a visual indicator — a green checkmark `✓` for `Hit` or `Destroyed`, a red cross `✗` for `Missed`.
+- [x] 10.5.2. Each entry renders: timestamp formatted as `HH:MM:SS`, drone ID, an arrow `→`, and the outcome with a visual indicator — a green checkmark `✓` for `Hit` or `Destroyed`, a red cross `✗` for `Missed`.
 
 ### 10.6 Acceptance criteria
 
-10.6.1. With no `Engagement Ready` drone, the FIRE button is disabled and labeled `NO TARGET`.
+- [x] 10.6.1. With no `Engagement Ready` drone, the FIRE button is disabled and labeled `NO TARGET`.
 
-10.6.2. When a drone reaches `Engagement Ready`, the FIRE button activates without a page action and its pulsing glow begins.
+- [x] 10.6.2. When a drone reaches `Engagement Ready`, the FIRE button activates without a page action and its pulsing glow begins.
 
-10.6.3. Pressing FIRE emits the `engagement:fire` socket event. The button enters the amber `ENGAGING...` state for approximately 350ms.
+- [x] 10.6.3. Pressing FIRE emits the `engagement:fire` socket event. The button enters the amber `ENGAGING...` state for approximately 350ms.
 
-10.6.4. On receiving `drone:hit` or `drone:missed`, a new entry appears in the log feed.
+- [x] 10.6.4. On receiving `drone:hit` or `drone:missed`, a new entry appears in the log feed.
 
-10.6.5. On receiving `drone:destroyed`, the drone disappears from the map and the target list auto-advances to the next available target.
+- [x] 10.6.5. On receiving `drone:destroyed`, the drone disappears from the map and the target list auto-advances to the next available target.
 
-10.6.6. Next/Prev buttons cycle through the sorted target list. Selection wraps correctly at both ends.
+- [x] 10.6.6. Next/Prev buttons cycle through the sorted target list. Selection wraps correctly at both ends.
 
 ---
 
@@ -1183,3 +1183,10 @@ td3/
 | 2026-03-19 | **Step 7 Leaflet map:** Replaced RadarDisplay with Leaflet map. Installed leaflet, react-leaflet@4, @types/leaflet. MapContainer: CartoDB dark tiles, Vite icon fix (import marker images). Created PlatformMarker (XM914E1 + heading arrow), DroneMarker (SVG arrow, color by status, TargetLockRing when selected), RangeCircles (2km green, 5km amber dashed), LineOfFire (platform→target). Deleted RadarDisplay. |
 | 2026-03-19 | **Step 7 checkboxes:** Marked 7.1–7.8 complete. Renamed TargetLockRing keyframe to `pulseRing` per 7.7.1. |
 | 2026-03-19 | **Step 7.8 acceptance criteria tests:** MapContainer.spec.tsx (7.8.1 tiles/platform, 7.8.2 drone markers, 7.8.4 click→line of fire, 7.8.5 range circles, 7.8.6 stable keys). DroneMarker.spec.tsx (7.8.3 status colors, 7.8.4 click→setSelected). RangeCircles.spec.tsx (7.8.5 2km/5km). LineOfFire.spec.tsx (7.8.4 polyline, 7.6.3 null). All 15 tests pass. |
+| 2026-03-19 | **Step 8.1–8.5 Status Panel:** StatusCards rewritten with data bindings: platformStore, connectionStore, droneStore, engagementLogStore. 8.2: XM914E1, 3rd Marine Brigade, turret badge (OPERATIONAL/LOW AMMO/OFFLINE). 8.3: LAT/LNG/HDG formatted. 8.4: DETECTED, IDENTIFIED, CONFIRMED, KILLS, ENGAGEMENTS, AMMO (amber when &lt;50). 8.5: Connection badge with dot (#00C853/#FFB300/#FF1744), Degraded blink, Offline LAST CONTACT. Added connection-blink keyframe to index.css. |
+| 2026-03-19 | **Step 8.6 acceptance criteria tests:** StatusCards.spec.tsx for 8.6.1 (all fields populate), 8.6.2 (Offline + LAST CONTACT with fake timers), 8.6.3 (KILLS/AMMO update). Added data-testid for kills-count, ammo-count, connection-status. All Phase 8 tests pass (StatusPanel + StatusCards). |
+| 2026-03-19 | **Step 9.1–9.2 Target Panel:** Created PriorityTargetList (9.1) and DroneDetailPanel (9.2). TargetPanel now contains both. PriorityTargetList: getSortedByDistance, empty when platform null, clickable cards with full spec (ID, type, status badge, DIST/BRG/ALT/SPD, threat bar green/amber/red, numbered 1–3, selected border #1E90FF). Client-side distance/bearing via calculateDistance/calculateBearing. DroneDetailPanel: NO TARGET SELECTED when null, full drone detail + ✓ WITHIN ENGAGEMENT RANGE when Engagement Ready. Removed PriorityTargetPanel. TargetPanel.spec.tsx for 9.1.1, 9.1.2, 9.2.2, 9.2.3. |
+| 2026-03-19 | **Step 9.3 + enableMapSet:** TargetPanel.spec.tsx for 9.3.1 (Confirmed/Engagement Ready only), 9.3.2 (sorted by distance), 9.3.3 (click→blue border), 9.3.4 (real-time update without losing selection), 9.3.5 (destroyed→NO TARGET, no auto-select). Added enableMapSet() to droneStore for Immer Map support (fixes removeDrone in tests). |
+| 2026-03-19 | **Step 10.1–10.3 Bottom Bar:** BottomBar: 10.1.1 layout (PREV, target label, NEXT, FIRE), 10.1.2 engagement log feed (last 10, HH:mm:ss, droneId → outcome ✓/✗). 10.2: canFire (Engagement Ready + !firing + platform.isActive), FIRE pulse glow, NO TARGET when disabled, ENGAGING… amber when firing. 10.3: handler with socket check, 350ms timeout. useSocket: drone:destroyed calls nextTarget after remove. PREV/NEXT disabled when sortedIds.length &lt; 2. LogPanel: wired to engagementLogStore, removed mock data and Update Log. Deleted LogEntries.tsx. Added fire-pulse-glow keyframe. |
+| 2026-03-19 | **Step 10.4–10.5:** Marked 10.4.1–10.4.4 and 10.5.1–10.5.2 complete (already implemented). Added BottomBar tests for 10.4.2/10.4.3 (PREV/NEXT change selection) and 10.5.2 (log entry format ✓/✗). |
+| 2026-03-19 | **Step 10.6 acceptance criteria tests:** BottomBar.spec.tsx for 10.6.1 (FIRE disabled/labeled NO TARGET), 10.6.2 (FIRE activates with fire-pulse when Engagement Ready), 10.6.3 (emit engagement:fire, ENGAGING… ~350ms), 10.6.4 (appendLog→log feed), 10.6.5 (remove+nextTarget→auto-advance), 10.6.6 (Next/Prev wrap). All 13 BottomBar tests pass. |
