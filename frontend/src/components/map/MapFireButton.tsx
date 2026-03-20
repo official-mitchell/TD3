@@ -3,19 +3,24 @@
  * Cmd+Enter (Mac) / Ctrl+Enter (PC). Glowing bg, grow/shrink idle, recoil on press.
  * Ammo count removed from button label. Firing continues until hit (backend 200/min).
  * Left/Right arrow keys switch target (prev/next by distance).
+ * D key: instantly destroy selected drone (for testing downing animation).
  * Uses firingDroneIdRef so ENGAGING resets on drone:destroyed even if selectedDroneId changes first.
  * Resets ENGAGING when user changes target (selectedDroneId !== firing target).
  * Resets ENGAGING when target drone status is no longer Engagement Ready or Hit (e.g. reverted to Confirmed).
  * Resets on drone:missed immediately (backend fires ~300ms/round; miss = reset right away).
+ * Throttled display updates (150ms) to reduce jitter. Button and description centered with flex.
+ * Optimistic tracers: add tracer immediately on fire and every 300ms during burst for instant feedback.
  */
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
+import { useTracerStore } from '../../store/tracerStore';
 import { getSocket } from '../../lib/socketRef';
 import { playFireSound, playSwivelSound } from '../../lib/sounds';
-import { PLATFORM_CONSTANTS, TURRET_SWIVEL_MS_PER_360 } from '../../utils/constants';
-import { calculateBearing, calculateElevationAngle } from '../../utils/calculations';
+import { PLATFORM_CONSTANTS } from '../../utils/constants';
+
+const FALLBACK_PLATFORM_POS = { lat: 25.905310475056915, lng: 51.543824178558054 };
 
 /** Mac: ⌘↵, PC: Ctrl+↵ */
 const getFireShortcutLabel = (): string =>
@@ -31,8 +36,6 @@ export const MapFireButton: React.FC = () => {
   const prevTarget = useTargetStore((s) => s.prevTarget);
   const [firing, setFiring] = useState(false);
   const [recoiling, setRecoiling] = useState(false);
-  const [barrelHeightReady, setBarrelHeightReady] = useState(false);
-  const barrelHeightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
   const sortedIds = useMemo(
@@ -40,53 +43,29 @@ export const MapFireButton: React.FC = () => {
     [drones, platform]
   );
   const selectedDrone = selectedDroneId ? drones.get(selectedDroneId) : null;
-  const currentTurretHeading = usePlatformStore((s) => s.currentTurretHeading);
-
-  const targetBearing = useMemo(() => {
-    if (!platform || !selectedDrone) return null;
-    const { degrees } = calculateBearing(platform.position, selectedDrone.position);
-    return degrees;
-  }, [platform, selectedDrone]);
-
-  const turretAligned = (() => {
-    if (targetBearing == null) return true;
-    let d = (currentTurretHeading - targetBearing + 360) % 360;
-    if (d > 180) d -= 360;
-    return Math.abs(d) < 2;
-  })();
-
-  const elevationAngle = useMemo(() => {
-    if (!platform || !selectedDrone) return 0;
-    return calculateElevationAngle(platform.position, selectedDrone.position);
-  }, [platform, selectedDrone]);
-
-  useEffect(() => {
-    if (barrelHeightTimerRef.current) clearTimeout(barrelHeightTimerRef.current);
-    barrelHeightTimerRef.current = null;
-    setBarrelHeightReady(false);
-
-    if (!selectedDrone || !turretAligned || !platform) return;
-
-    const delayMs = Math.max(400, (Math.abs(elevationAngle) / 360) * TURRET_SWIVEL_MS_PER_360);
-    barrelHeightTimerRef.current = setTimeout(() => {
-      barrelHeightTimerRef.current = null;
-      setBarrelHeightReady(true);
-    }, delayMs);
-
-    return () => {
-      if (barrelHeightTimerRef.current) clearTimeout(barrelHeightTimerRef.current);
-    };
-  }, [selectedDroneId, turretAligned, platform]);
 
   const canFire =
     selectedDrone?.status === 'Engagement Ready' &&
     !firing &&
-    turretAligned &&
-    barrelHeightReady &&
     (platform?.isActive ?? false) === true;
 
   const firingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const firingSoundIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const firingDroneIdRef = React.useRef<string | null>(null);
+
+  const addOptimisticTracer = useCallback((droneId: string) => {
+    const plat = usePlatformStore.getState().platform;
+    const drone = useDroneStore.getState().drones.get(droneId);
+    const start = plat?.position ?? FALLBACK_PLATFORM_POS;
+    const end = drone?.position ?? start;
+    useTracerStore.getState().addTracer({
+      startLat: start.lat,
+      startLng: start.lng,
+      endLat: end.lat,
+      endLng: end.lng,
+      outcome: 'Hit',
+    });
+  }, []);
 
   const handleFire = useCallback(() => {
     if (!canFire || !selectedDroneId) return;
@@ -98,39 +77,49 @@ export const MapFireButton: React.FC = () => {
     setRecoiling(true);
     usePlatformStore.getState().setTurretRecoiling(true);
     playFireSound();
+    addOptimisticTracer(selectedDroneId);
     socket.emit('engagement:fire', { droneId: selectedDroneId, timestamp: new Date().toISOString() });
     setTimeout(() => {
       setRecoiling(false);
       usePlatformStore.getState().setTurretRecoiling(false);
-    }, 180);
-    const fireSoundReplayRef = setTimeout(() => {
-      if (firingDroneIdRef.current === selectedDroneId) playFireSound();
-    }, 1000);
+    }, 200);
+    const ROUND_INTERVAL_MS = 300;
+    if (firingSoundIntervalRef.current) clearInterval(firingSoundIntervalRef.current);
+    firingSoundIntervalRef.current = setInterval(() => {
+      if (firingDroneIdRef.current === selectedDroneId) {
+        playFireSound();
+        addOptimisticTracer(selectedDroneId);
+      }
+    }, ROUND_INTERVAL_MS);
     firingTimeoutRef.current = setTimeout(() => {
-      clearTimeout(fireSoundReplayRef);
+      if (firingSoundIntervalRef.current) {
+        clearInterval(firingSoundIntervalRef.current);
+        firingSoundIntervalRef.current = null;
+      }
       if (firingDroneIdRef.current === selectedDroneId) {
         firingDroneIdRef.current = null;
         setFiring(false);
       }
     }, 2000);
-  }, [canFire, selectedDroneId]);
+  }, [canFire, selectedDroneId, addOptimisticTracer]);
 
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
-    const onDestroyed = (payload: { droneId: string }) => {
-      if (payload.droneId === firingDroneIdRef.current) {
-        if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
-        firingDroneIdRef.current = null;
-        setFiring(false);
+    const stopFiring = () => {
+      if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
+      if (firingSoundIntervalRef.current) {
+        clearInterval(firingSoundIntervalRef.current);
+        firingSoundIntervalRef.current = null;
       }
+      firingDroneIdRef.current = null;
+      setFiring(false);
+    };
+    const onDestroyed = (payload: { droneId: string }) => {
+      if (payload.droneId === firingDroneIdRef.current) stopFiring();
     };
     const onMissed = (payload: { droneId: string }) => {
-      if (payload.droneId === firingDroneIdRef.current) {
-        if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
-        firingDroneIdRef.current = null;
-        setFiring(false);
-      }
+      if (payload.droneId === firingDroneIdRef.current) stopFiring();
     };
     socket.on('drone:destroyed', onDestroyed);
     socket.on('drone:missed', onMissed);
@@ -138,6 +127,7 @@ export const MapFireButton: React.FC = () => {
       socket.off('drone:destroyed', onDestroyed);
       socket.off('drone:missed', onMissed);
       if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
+      if (firingSoundIntervalRef.current) clearInterval(firingSoundIntervalRef.current);
     };
   }, []);
 
@@ -183,6 +173,20 @@ export const MapFireButton: React.FC = () => {
         return;
       }
 
+      if (e.key === 'd' || e.key === 'D') {
+        if (selectedDroneId && selectedDrone) {
+          e.preventDefault();
+          const socket = getSocket();
+          if (socket) {
+            socket.emit('engagement:destroy', {
+              droneId: selectedDroneId,
+              position: selectedDrone.position,
+            });
+          }
+        }
+        return;
+      }
+
       if (e.key !== 'Enter') return;
       const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
       const mod = isMac ? e.metaKey : e.ctrlKey;
@@ -192,25 +196,15 @@ export const MapFireButton: React.FC = () => {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleFire, sortedIds, nextTarget, prevTarget]);
+  }, [handleFire, sortedIds, nextTarget, prevTarget, selectedDroneId, selectedDrone]);
 
   const shortcut = getFireShortcutLabel();
-  const buttonLabel = firing
-    ? 'Firing'
-    : canFire
-      ? `FIRE ${shortcut}`
-      : selectedDrone && selectedDrone.status === 'Engagement Ready' && platform?.isActive
-        ? !turretAligned
-          ? 'Rotating…'
-          : !barrelHeightReady
-            ? 'Adjusting Barrel Height…'
-            : `NO TARGET ${shortcut}`
-        : `NO TARGET ${shortcut}`;
+  const buttonLabel = firing ? 'Firing' : canFire ? `FIRE ${shortcut}` : `NO TARGET ${shortcut}`;
 
   const noFireReason =
     !canFire && !firing
       ? !selectedDroneId
-        ? 'Turret heading or altitude does not match selected drone target'
+        ? 'Select a target from the list'
         : !(platform?.isActive ?? false)
           ? 'Platform offline'
           : selectedDrone && selectedDrone.status !== 'Engagement Ready'
@@ -224,27 +218,23 @@ export const MapFireButton: React.FC = () => {
                 if (isFriendly) reasons.push('Friendly drone');
                 return reasons.length > 0 ? reasons.join(' · ') : 'Target must be Engagement Ready';
               })()
-            : selectedDrone && !turretAligned
-              ? 'Turret rotating to target'
-              : selectedDrone && !barrelHeightReady
-                ? 'Adjusting barrel height'
-                : null
+            : null
       : null;
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 z-[600] pointer-events-none"
+      className="absolute bottom-0 left-0 right-0 z-[600] pointer-events-none flex flex-col items-center justify-end pb-2"
       data-testid="map-fire-button"
     >
       <button
         onClick={handleFire}
         disabled={!canFire || firing}
         className={`
-          absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto
+          pointer-events-auto
           px-6 py-3 rounded-lg font-bold text-base min-w-[140px] transition-transform duration-75
             ${canFire && !firing ? 'fire-pulse' : ''}
-            ${recoiling ? 'fire-recoil' : 'fire-breathe'}
-            ${firing ? 'bg-amber-600 text-white cursor-not-allowed' : ''}
+            ${recoiling ? 'fire-recoil' : !firing ? 'fire-breathe' : ''}
+            ${firing ? 'fire-firing bg-amber-600 text-white cursor-not-allowed' : ''}
             ${canFire && !firing ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
             ${!canFire && !firing ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : ''}
           `}
@@ -252,10 +242,14 @@ export const MapFireButton: React.FC = () => {
           {buttonLabel}
         </button>
       {noFireReason && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center text-[10px] text-slate-500 whitespace-nowrap pointer-events-none">
+        <div className="text-center text-[10px] text-slate-500 whitespace-nowrap pointer-events-none mt-1">
           {noFireReason}
         </div>
       )}
     </div>
   );
 };
+
+/* --- Changelog ---
+ * 2025-03-19: Add optimistic tracers on fire and every 300ms during burst for instant feedback (fixes tracer lag).
+ */

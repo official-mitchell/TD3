@@ -1,0 +1,18 @@
+# TD3 Backend — Render Blueprint (Step 15.2)
+# Use "New > Blueprint" in Render Dashboard, connect this repo, and Render will create the service from this config.
+# Add MONGODB_URI, CORS_ORIGIN in the Render Dashboard Environment tab (do not commit secrets).
+services:
+  - type: web
+    name: td3-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npx tsc
+    startCommand: node dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Add these in Render Dashboard → Environment (never commit):
+      # MONGODB_URI = your Atlas connection string
+      # CORS_ORIGIN = your Vercel URL (e.g. https://your-app.vercel.app)

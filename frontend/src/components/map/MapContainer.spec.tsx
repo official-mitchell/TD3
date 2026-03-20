@@ -86,7 +86,7 @@ describe('MapContainer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     usePlatformStore.setState({ platform: null });
-    useDroneStore.setState({ drones: new Map() });
+    useDroneStore.setState({ drones: new Map(), droneTrails: new Map() });
     useTargetStore.setState({ selectedDroneId: null });
   });
 
@@ -204,6 +204,34 @@ describe('MapContainer', () => {
     });
 
     expect(screen.queryByTestId('telemetry-overlay')).toBeNull();
+  });
+
+  it('dying drones render skull overlay at position (DyingDroneOverlay)', () => {
+    const dyingDrone = createDrone({
+      droneId: 'DYING-1',
+      position: { lat: 37.81, lng: -122.45, altitude: 100 },
+    });
+    useDroneStore.setState({
+      drones: new Map(),
+      dyingDrones: new Map([['DYING-1', dyingDrone]]),
+    });
+    usePlatformStore.setState({ platform: PLATFORM });
+    render(<MapContainer />);
+    expect(screen.getByText('☠️')).toBeTruthy();
+  });
+
+  it('dying drone overlay uses latLngToContainerPoint for pixel-accurate placement', () => {
+    const dyingDrone = createDrone({
+      droneId: 'TGT-1',
+      position: { lat: 25.918, lng: 51.545, altitude: 120 },
+    });
+    useDroneStore.setState({
+      drones: new Map(),
+      dyingDrones: new Map([['TGT-1', dyingDrone]]),
+    });
+    usePlatformStore.setState({ platform: PLATFORM });
+    render(<MapContainer />);
+    expect(mockMap.latLngToContainerPoint).toHaveBeenCalledWith([25.918, 51.545]);
   });
 
   it('7.8.6: drone markers use stable keys (droneId) so position updates do not cause remounts', () => {

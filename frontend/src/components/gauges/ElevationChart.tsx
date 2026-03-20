@@ -56,7 +56,7 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({
         .startAngle(Math.PI / 2)
         .endAngle(0);
       g.append('path')
-        .attr('d', arcGrid() ?? '')
+        .attr('d', arcGrid({ innerRadius: r, outerRadius: r, startAngle: Math.PI / 2, endAngle: 0 }) ?? '')
         .attr('fill', 'none')
         .attr('stroke', '#E8F4FD')
         .attr('stroke-width', 1)
@@ -104,20 +104,21 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({
       .startAngle(Math.PI / 2)
       .endAngle(0);
     g.append('path')
-      .attr('d', arcBg() ?? '')
+      .attr('d', arcBg({ innerRadius: 0, outerRadius: RADIUS, startAngle: Math.PI / 2, endAngle: 0 }) ?? '')
       .attr('fill', 'none')
       .attr('stroke', '#1A3A5C')
       .attr('stroke-width', 2);
 
     // Blue highlight: 0° to elevation, positive X only, 65% transparent (35% opacity)
+    const arcFillEnd = Math.PI / 2 - (elevationDeg / 90) * (Math.PI / 2);
     const arcFill = d3
       .arc()
       .innerRadius(0)
       .outerRadius(RADIUS)
       .startAngle(Math.PI / 2)
-      .endAngle(Math.PI / 2 - (elevationDeg / 90) * (Math.PI / 2));
+      .endAngle(arcFillEnd);
     g.append('path')
-      .attr('d', arcFill() ?? '')
+      .attr('d', arcFill({ innerRadius: 0, outerRadius: RADIUS, startAngle: Math.PI / 2, endAngle: arcFillEnd }) ?? '')
       .attr('fill', '#1E90FF')
       .attr('fill-opacity', 0.35);
 

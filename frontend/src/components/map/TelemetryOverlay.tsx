@@ -15,8 +15,6 @@ import { CompassSpeedGauge } from '@components/gauges/CompassSpeedGauge';
 import { ThreatMeter } from '@components/gauges/ThreatMeter';
 import { EngagementProbability } from '@components/gauges/EngagementProbability';
 import { calculateDistance, calculateBearing } from '../../utils/calculations';
-import type { IDrone } from '@td3/shared-types';
-
 const SQUARE_SIZE = 180;
 const BAR_CONTAINER_HEIGHT = 72;
 

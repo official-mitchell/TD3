@@ -72,7 +72,10 @@ export interface DroneStatusPayload {
 
 export interface DroneDestroyedPayload {
   droneId: string;
-  timestamp: string;
+  /** Position at destruction (for map skull animation when drone not in store) */
+  position?: IPosition;
+  droneType?: DroneType;
+  timestamp?: string;
 }
 
 export interface TargetSelectPayload {

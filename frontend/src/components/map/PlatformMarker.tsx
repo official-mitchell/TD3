@@ -94,7 +94,8 @@ export const PlatformMarker: React.FC<{
         return;
       }
 
-      const duration = (Math.abs(delta) / 360) * TURRET_SWIVEL_MS_PER_360;
+      const minDuration = 800;
+      const duration = Math.max(minDuration, (Math.abs(delta) / 360) * TURRET_SWIVEL_MS_PER_360);
       const startTime = performance.now();
 
       const animate = (now: number) => {

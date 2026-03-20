@@ -106,9 +106,8 @@ describe('MapFireButton', () => {
     expect(screen.getByText(/Friendly drone/)).toBeTruthy();
   });
 
-  it('FIRE activates when drone is Engagement Ready and turret aligned', () => {
-    vi.useFakeTimers();
-    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
+  it('FIRE activates immediately when drone is Engagement Ready', () => {
+    usePlatformStore.setState({ platform: PLATFORM });
     useDroneStore.setState({
       drones: new Map([
         ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
@@ -116,27 +115,13 @@ describe('MapFireButton', () => {
     });
     useTargetStore.setState({ selectedDroneId: 'D1' });
     render(<MapFireButton />);
-    act(() => { vi.advanceTimersByTime(400); });
     const fireBtn = screen.getByRole('button', { name: /FIRE/ });
     expect(fireBtn).toBeTruthy();
     expect((fireBtn as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('FIRE disabled when turret not aligned with target', () => {
-    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 90 });
-    useDroneStore.setState({
-      drones: new Map([
-        ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
-      ]),
-    });
-    useTargetStore.setState({ selectedDroneId: 'D1' });
-    render(<MapFireButton />);
-    expect(screen.getByText('Turret rotating to target')).toBeTruthy();
-  });
-
   it('ENGAGING resets when user changes target (not stuck)', () => {
-    vi.useFakeTimers();
-    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
+    usePlatformStore.setState({ platform: PLATFORM });
     useDroneStore.setState({
       drones: new Map([
         ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
@@ -145,7 +130,6 @@ describe('MapFireButton', () => {
     });
     useTargetStore.setState({ selectedDroneId: 'D1' });
     render(<MapFireButton />);
-    act(() => { vi.advanceTimersByTime(400); });
     const fireBtn = screen.getByRole('button', { name: /FIRE/ });
     fireEvent.click(fireBtn);
 
@@ -156,13 +140,12 @@ describe('MapFireButton', () => {
     });
 
     expect(screen.queryByText('Firing')).toBeNull();
-    act(() => { vi.advanceTimersByTime(400); });
-    expect(screen.getByText(/FIRE|NO TARGET|Adjusting Barrel Height/)).toBeTruthy();
+    expect(screen.getByText(/FIRE|NO TARGET/)).toBeTruthy();
   });
 
   it('ENGAGING resets after 2 second burst if target not destroyed', () => {
     vi.useFakeTimers();
-    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
+    usePlatformStore.setState({ platform: PLATFORM });
     useDroneStore.setState({
       drones: new Map([
         ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
@@ -170,7 +153,6 @@ describe('MapFireButton', () => {
     });
     useTargetStore.setState({ selectedDroneId: 'D1' });
     render(<MapFireButton />);
-    act(() => { vi.advanceTimersByTime(400); });
     const fireBtn = screen.getByRole('button', { name: /FIRE/ });
     fireEvent.click(fireBtn);
 
@@ -183,8 +165,7 @@ describe('MapFireButton', () => {
   });
 
   it('pressing FIRE emits engagement:fire and shows Firing until drone:destroyed', () => {
-    vi.useFakeTimers();
-    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
+    usePlatformStore.setState({ platform: PLATFORM });
     useDroneStore.setState({
       drones: new Map([
         ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
@@ -192,7 +173,6 @@ describe('MapFireButton', () => {
     });
     useTargetStore.setState({ selectedDroneId: 'D1' });
     render(<MapFireButton />);
-    act(() => { vi.advanceTimersByTime(400); });
     const fireBtn = screen.getByRole('button', { name: /FIRE/ });
     fireEvent.click(fireBtn);
 

@@ -47,17 +47,18 @@ export const SpeedGauge: React.FC<SpeedGaugeProps> = ({ value, max = MAX_SPEED }
       .startAngle(startAngle)
       .endAngle(endAngle);
     g.append('path')
-      .attr('d', arcBg() ?? '')
+      .attr('d', arcBg({ innerRadius: RADIUS - 10, outerRadius: RADIUS, startAngle, endAngle }) ?? '')
       .attr('fill', '#1A3A5C');
 
+    const arcEnd = startAngle + ratio * ARC_SPAN;
     const arc = d3
       .arc()
       .innerRadius(RADIUS - 10)
       .outerRadius(RADIUS)
       .startAngle(startAngle)
-      .endAngle(startAngle + ratio * ARC_SPAN);
+      .endAngle(arcEnd);
     g.append('path')
-      .attr('d', arc() ?? '')
+      .attr('d', arc({ innerRadius: RADIUS - 10, outerRadius: RADIUS, startAngle, endAngle: arcEnd }) ?? '')
       .attr('fill', color);
 
     const angleAt = (t: number) => startAngle + t * ARC_SPAN;
@@ -116,7 +117,6 @@ export const SpeedGauge: React.FC<SpeedGaugeProps> = ({ value, max = MAX_SPEED }
     });
 
     // Digital readout centered in arc
-    const readoutX = 0;
     g.append('text')
       .attr('text-anchor', 'middle')
       .attr('x', 0)

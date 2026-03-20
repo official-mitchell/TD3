@@ -708,14 +708,62 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 - [x] allow me to click off the drone to deselect that target.
 - [x] tether sounds to animation
 - [x] rotate turret image by 15 degrees clockwise so turret barrel aligns with heading
-- [ ] create tracer rounds that match the amount count when they hit the drones ensure that they fade out after they fire; start as white-red bullets to imitate fire then fade them out
 - [x] animate the turret a subtle opposite heading x/y translation to mimic recoil, should reset after firing
-- [ ] create animation for landing hits and missed shots (show the rounds missing the target) and create little X's when they miss (assume they land behind the drone in some way)
-- [ ] create a range accuracy gradient cone away from the vehicle
-- [ ] generate FRIENDLIES on the screen — representing radar equipment, personnel, command posts, HQs, vehicles, aircraft, and ships. Generate friendlies inside, outside, and far outside the turret. Persist the allies in a database. When I click on them allow me to see their status.
 - [x] remove the engagement log from the bottom bar, so the bottom bar's height shrinks. Ensure the Engagement Log in the right side bar is organized from most recent first in descending order
 - [x] when new engagement logs come in have them animate in by fading from poping in even as they get layered.
 
+- [ ] create tracer rounds that match the ammo fired count, flashing a dotted line to where the bullet went, by default show an "x" in a muted color where the bullet landed (this will require tracing where the bullet started and where it landed)
+- [ ] when bullets hit the drones use a "+" in a brighter red; ensure bullets/bullet paths fade out 1 second after firing
+- [ ] create animation for landing hits and missed shots (show the rounds missing the target) and create little X's when they miss (assume they land behind the drone in some way)
+- [ ] create a range accuracy gradient cone away from the vehicle
+- [ ] generate FRIENDLIES on the screen — representing radar equipment, personnel, command posts, HQs, vehicles, aircraft, and ships. Generate friendlies inside, outside, and far outside the turret. Persist the allies in a database. When I click on them allow me to see their status.
+
+**Depends on:** Steps 2, 4, 7. Backend engagement handler emits `drone:hit` / `drone:missed`; platform and drone positions available from stores.
+**Output:** `TracerOverlay.tsx`, `AccuracyCone.tsx`, `FriendlyMarker.tsx`, backend `Friendly` model and routes.
+
+### 12a.1 Tracer rounds (715) ✅
+
+- [x] 12a.1.1. Create a `TracerOverlay` component rendered inside the Leaflet map. It subscribes to `drone:hit` and `drone:missed` events via `useSocket` and maintains a list of recent tracer entries: `{ id, startLatLng, endLatLng, outcome: 'Hit' | 'Missed', timestamp }`.
+
+- [x] 12a.1.2. For **hits**: `startLatLng` = platform position; `endLatLng` = drone position at time of hit (from `droneStore` snapshot or payload if backend adds it). For **misses**: `endLatLng` = point along the bearing from platform to drone, extended past the drone by a random 50–150 m (simulated overshoot behind target).
+
+- [x] 12a.1.3. Render each tracer as a dashed Polyline from start to end. Use `dashArray` for a dotted/flashing effect. At the end point, render a Leaflet `CircleMarker` or custom div with "x" in a muted color (e.g. `#6b7280`). Match tracer count to rounds fired: one tracer per `drone:hit` or `drone:missed` received.
+
+- [x] 12a.1.4. When bullets hit drones (outcome `Hit`): render a "+" in brighter red (`#ef4444` or `#dc2626`) at the hit position instead of "x".
+
+- [x] 12a.1.5. Fade out: remove tracer entries from the list 1 second after their `timestamp`. Use `setTimeout` or a cleanup effect keyed on timestamp.
+
+### 12a.2 Hit and miss markers (716, 717) ✅
+
+- [x] 12a.2.1. Consolidate hit/miss marker logic in `TracerOverlay`: hits show "+" in bright red; misses show "x" in muted color at the computed overshoot position.
+
+- [x] 12a.2.2. Ensure bullet paths (dotted lines) and markers (x/+) both fade out together 1 second after firing. No persistent markers after 1 s.
+
+### 12a.3 Range accuracy cone (718) ✅
+
+- [x] 12a.3.1. Create `AccuracyCone.tsx`: an SVG or Leaflet polygon overlay emanating from the platform position, aligned with the turret heading (or selected target bearing when a target is selected).
+
+- [x] 12a.3.2. The cone widens with distance. Use `MINIGUN_STATS.EFFECTIVE_RANGE_M` (300 m) and `MAX_RANGE_M` (4000 m). Inner cone (0–300 m): higher opacity (e.g. 0.4); outer cone (300–4000 m): gradient to lower opacity (e.g. 0.1) to suggest accuracy falloff.
+
+- [x] 12a.3.3. Render as a semi-transparent filled polygon. When no target selected, use `platformStore.currentTurretHeading`; when target selected, use bearing to target for cone direction.
+
+### 12a.4 Friendlies (719)
+
+12a.4.1. **Backend:** Add Mongoose `Friendly` model: `friendlyId`, `type` (radar | personnel | command_post | hq | vehicle | aircraft | ship), `position` (IPosition), `status` (string), `lastUpdated`. Seed script or API to generate friendlies inside (< 300 m), outside (300–2000 m), and far outside (> 2000 m) the turret.
+
+12a.4.2. **Backend:** Add `GET /api/friendlies` and optional `GET /api/friendlies/:id` for status. Emit `friendly:update` via Socket.IO if live updates are desired, or rely on REST for initial load.
+
+12a.4.3. **Frontend:** Create `FriendlyMarker.tsx` — distinct icon or color (e.g. blue/green) from drone markers. On click, show a status panel or tooltip with friendly type and status.
+
+12a.4.4. **Frontend:** Add `useFriendlies` hook or store to fetch and hold friendlies. Render `FriendlyMarker` for each friendly on the map. Click handler opens status view (sidebar panel or modal).
+
+### 12a.5 Acceptance criteria
+
+- [x] 12a.5.1. Firing at a drone produces tracer lines (dotted) from platform to hit/miss point; hits show "+" in bright red, misses show "x" in muted color. All fade out within 1 s.
+
+- [x] 12a.5.2. Accuracy cone renders from platform, aligned with turret heading or target bearing; gradient reflects effective vs max range.
+
+- [ ] 12a.5.3. Friendlies appear on map with distinct styling; clicking one shows status. Friendlies persist in database and load on page refresh.
 
 ---
 
@@ -728,112 +776,180 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 **Depends on:** Step 2.
 **Output:** Updated telemetry simulation logic in `apps/backend/src/services/socket-service.ts` replacing random movement with purpose-driven swarm behavior.
 
-### 13.1 Approach vector
+### 13.1 Approach vector ✅
 
-13.1.1. On each simulation tick, calculate the bearing from each drone's current position to the platform's position.
+- [x] 13.1.1. On each simulation tick, calculate the bearing from each drone's current position to the platform's position.
 
-13.1.2. Rather than snapping the drone's heading directly to that bearing, nudge it toward the target bearing by a random amount between 5° and 15° per tick. This simulates realistic flight path corrections rather than instant reorientation.
+- [x] 13.1.2. Rather than snapping the drone's heading directly to that bearing, nudge it toward the target bearing by a random amount between 5° and 15° per tick. This simulates realistic flight path corrections rather than instant reorientation.
 
-### 13.2 Speed escalation
+### 13.2 Speed escalation ✅
 
-13.2.1. As a drone's distance to the platform drops below 3km, increase its speed by `+5 km/h` per tick up to a maximum of `250 km/h`.
+- [x] 13.2.1. As a drone's distance to the platform drops below 3km, increase its speed by `+5 km/h` per tick up to a maximum of `250 km/h`.
 
-13.2.2. Above 3km, hold speed within a randomized base range of `80–130 km/h` depending on drone type.
+- [x] 13.2.2. Above 3km, hold speed within a randomized base range of `80–130 km/h` depending on drone type.
 
-### 13.3 Threat level calculation
+### 13.3 Threat level calculation ✅
 
-13.3.1. Recalculate `threatLevel` on every tick as `1 - (distanceMeters / 5000)`, clamped to `[0, 1]`. A drone at 5km or beyond has threat level `0`. A drone at the platform has threat level `1`.
+- [x] 13.3.1. Recalculate `threatLevel` on every tick as `1 - (distanceMeters / 5000)`, clamped to `[0, 1]`. A drone at 5km or beyond has threat level `0`. A drone at the platform has threat level `1`.
 
-### 13.4 Automatic status progression
+### 13.4 Automatic status progression ✅
 
-13.4.1. A drone spawns with status `Detected`.
+- [x] 13.4.1. A drone spawns with status `Detected`.
 
-13.4.2. After 3 consecutive ticks within 5km, advance to `Identified`. Emit `drone:status` on the change.
+- [x] 13.4.2. After 3 consecutive ticks within 5km, advance to `Identified`. Emit `drone:status` on the change.
 
-13.4.3. When `threatLevel > 0.5` and distance is under 3km, advance to `Confirmed`. Emit `drone:status`.
+- [x] 13.4.3. When `threatLevel > 0.5` and distance is under 3km, advance to `Confirmed`. Emit `drone:status`.
 
-13.4.4. When distance is under 2km and status is `Confirmed`, advance to `Engagement Ready`. Emit `drone:status`.
+- [x] 13.4.4. When distance is under 2km and status is `Confirmed`, advance to `Engagement Ready`. Emit `drone:status`.
 
-13.4.5. Each status advancement is a one-way progression. A drone cannot revert to a lower status during normal approach.
+- [x] 13.4.5. Each status advancement is a one-way progression. A drone cannot revert to a lower status during normal approach.
 
-### 13.5 Evasive maneuver on miss
+### 13.5 Evasive maneuver on miss ✅
 
-13.5.1. When the engagement logic in Step 2 resolves a miss for a drone, flag that drone as `evading` in its in-memory state.
+- [x] 13.5.1. When the engagement logic in Step 2 resolves a miss for a drone, flag that drone as `evading` in its in-memory state.
 
-13.5.2. While `evading`, add a random jink of ±45° to the drone's heading and increase speed by `+30 km/h`.
+- [x] 13.5.2. While `evading`, add a random jink of ±45° to the drone's heading and increase speed by `+30 km/h`.
 
-13.5.3. After 5 simulation ticks, clear the `evading` flag and resume the normal approach vector behavior.
+- [x] 13.5.3. After 5 simulation ticks, clear the `evading` flag and resume the normal approach vector behavior.
 
-### 13.6 Swarm formation
+### 13.6 Swarm formation ✅
 
-13.6.1. When 3 or more drones are active simultaneously, space their approach bearings 120° apart around the platform. New drones that spawn slot into the next available bearing gap rather than approaching from the same direction.
+- [x] 13.6.1. When 3 or more drones are active simultaneously, space their approach bearings 120° apart around the platform. New drones that spawn slot into the next available bearing gap rather than approaching from the same direction.
 
 ### 13.7 Acceptance criteria
 
-13.7.1. Spawn 3 drones. After 30 seconds on the map, all three drones are visibly moving toward the platform.
+- [x] 13.7.1. Spawn 3 drones. After 30 seconds on the map, all three drones are visibly moving toward the platform.
 
-13.7.2. Drone statuses automatically advance through `Identified`, `Confirmed`, and `Engagement Ready` as they approach. No manual action is required to trigger progression.
+- [x] 13.7.2. Drone statuses automatically advance through `Identified`, `Confirmed`, and `Engagement Ready` as they approach. No manual action is required to trigger progression.
 
-13.7.3. After a missed engagement, the targeted drone visibly changes heading for several ticks before resuming its approach vector.
+- [ ] 13.7.3. After a missed engagement, the targeted drone visibly changes heading for several ticks before resuming its approach vector. (Manual verification)
 
-13.7.4. With 3 active drones, their approach vectors are spread roughly 120° apart rather than clustered.
+- [x] 13.7.4. With 3 active drones, their approach vectors are spread roughly 120° apart rather than clustered.
+
 
 ---
 
-## 14. PWA — Service Worker and Offline Mode
+## updating to 60 FPS
+
+
+Here’s how moving to ~60 fps (0.016 s) updates affects the system.
+
+---
+
+## Backend changes
+
+### 1. **Simulation tick rate**
+- **Current:** `updateInterval: 2000` (every 2 s)
+- **Target:** `updateInterval: 16` (≈60 fps)
+
+### 2. **What scales automatically**
+- **Movement distance:** `moveM = (speed * 1000 * updateInterval) / 3600000` — already time-based, so it scales with `updateInterval`.
+- **Socket emits:** Frontend will receive more `drone:update` events; it just reacts to whatever the backend sends.
+- **Firing:** `ROUND_INTERVAL_MS = 300` is independent of the simulation tick.
+
+### 3. **What must be scaled explicitly**
+
+| Logic | Current | At 60 fps | Fix |
+|-------|---------|-----------|-----|
+| **Speed escalation (13.2)** | +5 km/h per tick | +5 km/h per 16 ms → ~312 km/h/s | Use time-based delta: `speed += 5 * (updateInterval / 1000)` |
+| **Status progression (13.4)** | 3 ticks within 5 km | 3 × 16 ms = 48 ms | Switch to time: e.g. 6 s within 5 km |
+| **Evading duration (13.5)** | 5 ticks | 5 × 16 ms = 80 ms | Switch to time: e.g. 10 s (5000 ms) |
+| **Heading nudge (13.1)** | 5–15° per tick | Same per tick → much faster turning | Scale: e.g. `nudgeDeg * (updateInterval / 2000)` |
+
+---
+
+## Reverberations (cascading effects)
+
+1. **DB load:** At 60 fps, 6 drones → ~360 `drone.save()` calls per second. The plan says “no need to log all of that,” so we should avoid persisting every tick.
+2. **Socket traffic:** ~360 `droneUpdate` events/sec. Likely fine for WebSocket, but worth monitoring.
+3. **Frontend:** React will re-render more often. Drone markers and map updates should handle it; Leaflet is usually fine.
+4. **E2E tests:** They use fixed waits (e.g. 32 s). With 60 fps, fewer ticks are needed for the same simulated time; test durations can stay the same.
+5. **`PLATFORM_CONSTANTS.UPDATE_INTERVAL`:** Frontend constant (2000 ms). Used for engagement altitude, not for tick rate. Can stay as-is or be updated for consistency.
+
+---
+
+## Summary
+
+| Component | Dynamic? | Action |
+|-----------|----------|--------|
+| Movement distance | Yes | No change |
+| Speed +5 km/h | No | Make time-based |
+| Status progression | No | Use time (e.g. 6 s) instead of ticks |
+| Evading 5 ticks | No | Use time (e.g. 10 s) instead of ticks |
+| Heading nudge | No | Scale by tick duration |
+| DB persistence | No | Throttle or skip per-tick writes |
+| Socket emit | Yes | No change |
+| Frontend | Yes | No change |
+
+---
+
+## Recommended implementation
+
+1. Set `updateInterval: 16` (or 17 for 1/60 s).
+2. Make speed escalation time-based: `speed += 5 * (updateInterval / 1000)`.
+3. Replace tick-based status progression with time-based (e.g. `msWithin5km >= 6000`).
+4. Replace evading tick count with time (e.g. `evadingMsRemaining`).
+5. Scale heading nudge by tick duration.
+6. Avoid `drone.save()` on every tick; either throttle (e.g. every 500 ms) or only persist on status changes and at end of engagement.
+
+
+
+---
+
+## 14. PWA — Service Worker and Offline Mode ✅
 
 **Depends on:** Step 5.
 **Output:** A Workbox-powered service worker, `manifest.json`, IndexedDB offline storage, and an offline banner component.
 
 ### 14.1 Install dependencies
 
-14.1.1. Install `vite-plugin-pwa` as a dev dependency.
+- [x] 14.1.1. Install `vite-plugin-pwa` as a dev dependency.
 
 ### 14.2 Vite configuration
 
-14.2.1. Add `VitePWA` to the plugins array in `apps/frontend/vite.config.ts`.
+- [x] 14.2.1. Add `VitePWA` to the plugins array in `apps/frontend/vite.config.ts`.
 
-14.2.2. Set `registerType: 'autoUpdate'` so the service worker updates silently when a new build is deployed.
+- [x] 14.2.2. Set `registerType: 'autoUpdate'` so the service worker updates silently when a new build is deployed.
 
-14.2.3. Configure `workbox.globPatterns` to precache all `.js`, `.css`, `.html`, `.ico`, `.png`, `.svg`, and `.woff2` files.
+- [x] 14.2.3. Configure `workbox.globPatterns` to precache all `.js`, `.css`, `.html`, `.ico`, `.png`, `.svg`, and `.woff2` files.
 
-14.2.4. Configure runtime caching with two rules: one for CartoDB map tile URLs using `CacheFirst` strategy with a cache name of `map-tiles`, max 200 entries, and a max age of 86,400 seconds (24 hours); one for all `/api/*` URLs using `NetworkFirst` strategy with a cache name of `api-cache`, max 50 entries, and a 300-second TTL.
+- [x] 14.2.4. Configure runtime caching with two rules: one for CartoDB map tile URLs using `CacheFirst` strategy with a cache name of `map-tiles`, max 200 entries, and a max age of 86,400 seconds (24 hours); one for all `/api/*` URLs using `NetworkFirst` strategy with a cache name of `api-cache`, max 50 entries, and a 300-second TTL.
 
 ### 14.3 Manifest
 
-14.3.1. Set `name` to `Tactical Drone Defense Dashboard`, `short_name` to `TD3`, `theme_color` to `#0F3460`, `background_color` to `#0A0E1A`, `display` to `fullscreen`, and `orientation` to `landscape`.
+- [x] 14.3.1. Set `name` to `Tactical Drone Defense Dashboard`, `short_name` to `TD3`, `theme_color` to `#0F3460`, `background_color` to `#0A0E1A`, `display` to `fullscreen`, and `orientation` to `landscape`.
 
-14.3.2. Include two icon entries: `icon-192.png` at `192x192` and `icon-512.png` at `512x512` with `purpose: 'any maskable'`.
+- [x] 14.3.2. Include two icon entries: `icon-192.png` at `192x192` and `icon-512.png` at `512x512` with `purpose: 'any maskable'`.
 
 ### 14.4 PWA icons
 
-14.4.1. Create `apps/frontend/public/icons/icon-192.png` — 192×192 pixels, dark navy (`#0F3460`) background with a white crosshair or `TD3` lettermark centered.
+- [x] 14.4.1. Create `apps/frontend/public/icons/icon-192.png` — 192×192 pixels, dark navy (`#0F3460`) background with a white crosshair or `TD3` lettermark centered.
 
-14.4.2. Create `apps/frontend/public/icons/icon-512.png` — 512×512 pixels, same design.
+- [x] 14.4.2. Create `apps/frontend/public/icons/icon-512.png` — 512×512 pixels, same design.
 
 ### 14.5 IndexedDB offline storage
 
-14.5.1. Create `apps/frontend/src/lib/offlineStorage.ts`. It must export three functions: `openDB()` which opens or creates a version-1 IndexedDB database named `td3-offline` with an object store named `telemetry` keyed by `timestamp`; `saveTelemetry(entry: object)` which writes a record to the store; and `getRecentTelemetry()` which retrieves all records and returns the newest 500.
+- [x] 14.5.1. Create `apps/frontend/src/lib/offlineStorage.ts`. It must export three functions: `openDB()` which opens or creates a version-1 IndexedDB database named `td3-offline` with an object store named `telemetry` keyed by `timestamp`; `saveTelemetry(entry: object)` which writes a record to the store; and `getRecentTelemetry()` which retrieves all records and returns the newest 500.
 
-14.5.2. Each write operation must also prune the store so it never exceeds 500 entries. Delete the oldest entries to maintain the cap.
+- [x] 14.5.2. Each write operation must also prune the store so it never exceeds 500 entries. Delete the oldest entries to maintain the cap.
 
-14.5.3. Call `saveTelemetry(drone)` inside the `drone:update` handler in `useSocket.ts` (Step 4.2.7 above).
+- [x] 14.5.3. Call `saveTelemetry(drone)` inside the `drone:update` handler in `useSocket.ts` (Step 4.2.7 above).
 
 ### 14.6 Offline banner
 
-14.6.1. Create `apps/frontend/src/components/layout/OfflineBanner.tsx`. It renders a fixed-position amber bar across the full top of the screen with the text `⚠ CONNECTION LOST — DISPLAYING LAST KNOWN STATE`.
+- [x] 14.6.1. Create `apps/frontend/src/components/layout/OfflineBanner.tsx`. It renders a fixed-position amber bar across the full top of the screen with the text `⚠ CONNECTION LOST — DISPLAYING LAST KNOWN STATE`.
 
-14.6.2. In `DashboardView.tsx`, subscribe to `connectionStore.status`. Render `OfflineBanner` when status is `Offline`.
+- [x] 14.6.2. In `DashboardView.tsx`, subscribe to `connectionStore.status`. Render `OfflineBanner` when status is `Offline`.
 
 ### 14.7 Acceptance criteria
 
-14.7.1. Run `npx nx build frontend` and serve the output with a static server. Run the Lighthouse PWA audit. All three PWA checklist items must pass: installable, offline capability, and icons.
+- [x] 14.7.1. Run `npx nx build frontend` and serve the output with a static server. Run the Lighthouse PWA audit. All three PWA checklist items must pass: installable, offline capability, and icons.
 
-14.7.2. Disable the network tab in browser DevTools after the app has loaded. Reload the page. The app loads from cache with no network requests failing.
+- [x] 14.7.2. Disable the network tab in browser DevTools after the app has loaded. Reload the page. The app loads from cache with no network requests failing.
 
-14.7.3. The offline banner is visible after the network is disabled and the heartbeat watchdog has timed out.
+- [x] 14.7.3. The offline banner is visible after the network is disabled and the heartbeat watchdog has timed out.
 
-14.7.4. Open the Application tab in DevTools. Under IndexedDB, confirm `td3-offline` / `telemetry` contains drone records.
+- [x] 14.7.4. Open the Application tab in DevTools. Under IndexedDB, confirm `td3-offline` / `telemetry` contains drone records.
 
 ---
 
@@ -855,13 +971,15 @@ All TypeScript types are defined once in `libs/shared-types/src/index.ts` and im
 
 15.2.1. Create a new Web Service on `render.com`. Connect the GitHub repository.
 
-15.2.2. Set Root Directory to `apps/backend`.
+15.2.2. Set Root Directory to `backend` (or `apps/backend` if your repo uses that path).
 
 15.2.3. Set Build Command to `npm install && npx tsc`.
 
 15.2.4. Set Start Command to `node dist/main.js`.
 
-15.2.5. Add environment variables: `MONGO_URI` from step 15.1.4, `CORS_ORIGIN` set to the Vercel URL (update this after deploying in step 15.3), `NODE_ENV` set to `production`, and `PORT` set to `3000`.
+**Alternative — Blueprint (if Build/Start Command fields are not visible in the dashboard):** Use `render.yaml` in the repo root. In Render Dashboard, click **New > Blueprint**, connect the repo. Render reads `render.yaml` and creates the service with `buildCommand` and `startCommand`. Add `MONGODB_URI` and `CORS_ORIGIN` in the service's Environment tab.
+
+15.2.5. Add environment variables: `MONGODB_URI` from step 15.1.4 (backend reads this, not `MONGO_URI`), `CORS_ORIGIN` set to the Vercel URL (update this after deploying in step 15.3), `NODE_ENV` set to `production`, and `PORT` set to `3000`.
 
 15.2.6. Save and deploy. Copy the Render service URL once the deployment is healthy.
 
@@ -1255,3 +1373,13 @@ td3/
 | 2026-03-19 | **Priority targets: engageable only, sorted by threat:** droneStore.getEngageableTargets: Engagement Ready only, altitude ≤ 500m, not friendly, sorted by threat descending. PriorityTargetList, TargetPanel, BottomBar, MapFireButton, useSocket, useDrones now use getEngageableTargets for target list and PREV/NEXT. TargetPanel.spec: 9.3.1 (engageable only), 9.3.2 (sorted by threat). |
 | 2026-03-19 | **Ammo/HP engagement overhaul:** Hit probability reduced 85% (×0.15). Drones have hitPoints (1–10 random). Multi-hit: each hit decrements HP; drone:destroyed only when HP=0. IDrone + Drone schema + createTestDrones + test route: hitPoints. TelemetryOverlay + PriorityTargetList: show HP. 200 rounds/min unchanged. |
 | 2026-03-19 | **Implementation Plan 709–716 (partial):** (709) Tether sounds: fire sound on recoil start; ricochets on drone:hit/drone:destroyed. (710) Turret image +15° clockwise for barrel alignment. (712) Turret recoil: opposite-heading x/y translate on fire, reset after 180ms. (715) BottomBar: removed engagement log (right sidebar only), height shrunk. (716) LogPanel: most recent first (store prepends), new entries animate in (fade+pop). |
+| 2026-03-19 | **Implementation Plan 715–719 expansion:** Added Section 12a with structured sub-tasks for tracer rounds (12a.1), hit/miss markers (12a.2), range accuracy cone (12a.3), and friendlies (12a.4). Includes dependencies, output files, approach bullets, and acceptance criteria (12a.5). |
+| 2026-03-19 | **Tracer rounds, accuracy cone, hide downed drones:** Backend: emit landingPosition in drone:hit/drone:missed; miss = cone scatter (angle ±cone, overshoot 50–150m). Frontend: TracerOverlay (dotted lines, + hit / × miss, 1s fade), AccuracyCone (polygon aligned with turret/target), showDyingDrones: false (hide skull overlay), filter DroneMarker to exclude Hit/Destroyed. |
+| 2026-03-19 | **12a completion, 13.1, accuracy, port fix:** Marked 12a.1–12a.3, 12a.5.1–12a.5.2 complete. Hit probability 0.55 for better targeting. dev:kill-port script frees 3333 before dev. 13.1 Approach vector: 70% of drones nudge heading 5–15° toward platform bearing per tick, move in heading direction; 30% patrol (random). |
+| 2026-03-19 | **13.2–13.4:** Speed escalation (distance <3km: +5 km/h/tick cap 250; ≥3km: 80–130 by type). Threat level = 1 − distance/5000. Status progression: 3 ticks within 5km → Identified; threatLevel>0.5 & <3km → Confirmed; <2km → Engagement Ready. Emit drone:status on change. Frontend: drone:status handler. |
+| 2026-03-19 | **13.5–13.7:** Evasive maneuver: on miss, flag evading 5 ticks; ±45° jink, +30 km/h. Swarm formation: 3+ drones get slot bearings 120° apart. backend-e2e/drone-behavior.spec.ts: 13.7.1, 13.7.2, 13.7.4 automated; 13.7.3 manual. |
+| 2026-03-19 | **60fps simulation:** updateInterval 16ms. Throttle drone.save() to 500ms or on status change. Time-based: speed += 5*(dt/1000) km/h/s; msWithin5km>=6000 for Identified; evadingMsRemaining 10s; heading nudge scaled by dt/2000. simulation:rate emitted every second; connectionStore.simulationRate; StatusCards shows "X drone updates/s". PLATFORM_CONSTANTS.UPDATE_INTERVAL 16. |
+| 2026-03-19 | **Stable drone movement:** droneBaseSpeed per drone when >=3km (no random each tick); fixed 8 deg/s heading nudge; patrol ±2 deg heading, ±1m altitude; evading ±15° jink, +30 km/h/s. **MapFireButton:** useThrottledValue(150ms) for turret/barrel state; flex center for button + description. |
+| 2026-03-19 | **Smooth drone flight:** All drones move via destinationPoint (heading + speed). No random lat/lng. Approach (70%): nudge 8 deg/s toward platform. Cruise (30%): arc turn every 25–40s, 3 deg/s. Flight trail: dotted line when drone selected (droneTrails in droneStore). Tests: calculations.spec (movement math), FlightTrailOverlay.spec, drone-behavior 13.7.5 (heading consistency). |
+| 2026-03-19 | **Step 14.1–14.6 PWA and offline mode:** Installed vite-plugin-pwa (^0.20.5). VitePWA: registerType autoUpdate, globPatterns (js,css,html,ico,png,svg,woff2), runtimeCaching: CartoDB map tiles (CacheFirst, 200 entries, 24h), /api/* (NetworkFirst, 50 entries, 300s). Manifest: name, short_name TD3, theme #0F3460, background #0A0E1A, fullscreen, landscape, icons 192/512. Icons in public/icons/. offlineStorage.ts: openDB, saveTelemetry, getRecentTelemetry; td3-offline IndexedDB, telemetry store, 500 cap. useSocket: saveTelemetry on droneUpdate/drone:update. OfflineBanner: amber bar when Offline. DashboardView: OfflineBanner when connectionStore.status Offline. |
+| 2026-03-20 | **Phase 14 complete, build fixes:** Fixed d3 arc() calls to pass DefaultArcObject (innerRadius, outerRadius, startAngle, endAngle) instead of null — ElevationChart, SpeedGauge. Removed unused imports (DyingDroneOverlay, TelemetryOverlay, TracerOverlay), unused readoutX (SpeedGauge), fixed useThrottledValue useEffect return. Phase 14 tasks 14.1–14.7 checked off in Implementation Plan. |

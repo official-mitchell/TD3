@@ -4,6 +4,7 @@
  * Per Implementation Plan 3.2. enableMapSet() required for Immer Map support.
  * getEngageableTargets: Engagement Ready only, altitude <= 500m, not friendly, sorted by threat descending.
  * dyingDrones: drones just destroyed, shown with skull + float animation for 3s.
+ * droneTrails: position history per drone for flight path display (dotted line when selected).
  */
 import { enableMapSet } from 'immer';
 import { create } from 'zustand';
@@ -16,10 +17,14 @@ import { calculateDistance } from '../utils/calculations';
 import { PLATFORM_CONSTANTS } from '../utils/constants';
 
 const DYING_DRONE_DURATION_MS = 3000;
+const MAX_TRAIL_POINTS = 150;
+
+export type TrailPoint = { lat: number; lng: number };
 
 interface DroneState {
   drones: Map<string, IDrone>;
   dyingDrones: Map<string, IDrone>;
+  droneTrails: Map<string, TrailPoint[]>;
   updateDrone: (drone: IDrone) => void;
   removeDrone: (droneId: string) => void;
   addDyingDrone: (drone: IDrone) => void;
@@ -27,6 +32,7 @@ interface DroneState {
   clearDrones: () => void;
   getSortedByDistance: (platformLat: number, platformLng: number) => IDrone[];
   getEngageableTargets: (platformLat: number, platformLng: number) => IDrone[];
+  getTrail: (droneId: string) => TrailPoint[];
 }
 
 const platformPos = (lat: number, lng: number) => ({ lat, lng });
@@ -36,15 +42,30 @@ export const useDroneStore = create<DroneState>()(
     immer((set, get) => ({
       drones: new Map(),
       dyingDrones: new Map(),
+      droneTrails: new Map(),
 
       updateDrone: (drone) =>
         set((state) => {
           state.drones.set(drone.droneId, drone);
+          const pos = drone.position;
+          if (pos && typeof pos.lat === 'number' && typeof pos.lng === 'number') {
+            let trail = state.droneTrails.get(drone.droneId);
+            if (!trail) {
+              trail = [];
+              state.droneTrails.set(drone.droneId, trail);
+            }
+            const last = trail[trail.length - 1];
+            if (!last || last.lat !== pos.lat || last.lng !== pos.lng) {
+              trail.push({ lat: pos.lat, lng: pos.lng });
+              if (trail.length > MAX_TRAIL_POINTS) trail.shift();
+            }
+          }
         }),
 
       removeDrone: (droneId) =>
         set((state) => {
           state.drones.delete(droneId);
+          state.droneTrails.delete(droneId);
         }),
 
       addDyingDrone: (drone) =>
@@ -64,7 +85,10 @@ export const useDroneStore = create<DroneState>()(
         set((state) => {
           state.drones.clear();
           state.dyingDrones.clear();
+          state.droneTrails.clear();
         }),
+
+      getTrail: (droneId) => get().droneTrails.get(droneId) ?? [],
 
       getSortedByDistance: (platformLat, platformLng) => {
         const { drones } = get();

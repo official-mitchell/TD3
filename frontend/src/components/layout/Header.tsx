@@ -37,6 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
   const weaponSize = useUIStore((s) => s.weaponSize);
   const droneSize = useUIStore((s) => s.droneSize);
   const soundVolume = useUIStore((s) => s.soundVolume);
+  const showDyingDrones = useUIStore((s) => s.showDyingDrones);
+  const setShowDyingDrones = useUIStore((s) => s.setShowDyingDrones);
   const setWeaponSize = useUIStore((s) => s.setWeaponSize);
   const setDroneSize = useUIStore((s) => s.setDroneSize);
   const setSoundVolume = useUIStore((s) => s.setSoundVolume);
@@ -219,6 +221,15 @@ export const Header: React.FC<HeaderProps> = ({
               step={0.1}
               size="small"
               sx={{ color: '#1E90FF' }}
+            />
+          </div>
+          <div className="px-4 py-2 border-t border-[#1A3A5C] flex items-center justify-between gap-2">
+            <span className="text-xs text-[#7B9BB5]">Show downed drones</span>
+            <input
+              type="checkbox"
+              checked={showDyingDrones}
+              onChange={(e) => setShowDyingDrones(e.target.checked)}
+              className="rounded"
             />
           </div>
           <div className="px-4 py-2 border-t border-[#1A3A5C]">

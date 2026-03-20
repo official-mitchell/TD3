@@ -39,6 +39,29 @@ export const calculateBearing = (pos1: LatLng, pos2: LatLng) => {
   };
 };
 
+/** Destination point given start, bearing (deg), and distance (m). Haversine-based. */
+export const destinationPoint = (
+  start: LatLng,
+  bearingDeg: number,
+  distanceM: number
+): { lat: number; lng: number } => {
+  const R = 6371e3;
+  const φ1 = (start.lat * Math.PI) / 180;
+  const λ1 = (start.lng * Math.PI) / 180;
+  const θ = (bearingDeg * Math.PI) / 180;
+  const δ = distanceM / R;
+  const φ2 = Math.asin(
+    Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ)
+  );
+  const λ2 =
+    λ1 +
+    Math.atan2(
+      Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+      Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2)
+    );
+  return { lat: (φ2 * 180) / Math.PI, lng: (λ2 * 180) / Math.PI };
+};
+
 /** Elevation angle (degrees above horizontal) from platform to drone. Platform assumed at ground (alt 0). */
 export const calculateElevationAngle = (
   platformPos: { lat: number; lng: number },

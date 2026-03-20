@@ -1,7 +1,11 @@
 /**
  * WebSocket hook — Socket.IO connection, event routing to stores, heartbeat lifecycle.
- * Per Implementation Plan 4.2, 4.3. Step 14 saveTelemetry stubbed until offline storage exists.
+ * Per Implementation Plan 4.2, 4.3, 14.5.3. saveTelemetry writes drone updates to IndexedDB for offline.
  * drones:replace: full replace of drone list (after create/clear), clears selection if needed.
+ * drone:destroyed: always append Destroyed to engagement log; addDyingDrone with last recorded position.
+ * Position from: (1) drone in store, or (2) payload.position (backend sends last known from DB).
+ * Use getState() in handlers to avoid stale closure (drones loaded after socket connects).
+ * simulation:rate: updates connectionStore.simulationRate for droneUpdate events/sec monitoring.
  */
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
@@ -10,11 +14,16 @@ import { usePlatformStore } from '../store/platformStore';
 import { useTargetStore } from '../store/targetStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { useEngagementLogStore } from '../store/engagementLogStore';
+import { useTracerStore } from '../store/tracerStore';
 import type { IDrone, IWeaponPlatform, IEngagementRecord } from '@td3/shared-types';
 import { setSocketRef } from '../lib/socketRef';
 import { playHitSound, playRichochetSounds } from '../lib/sounds';
+import { saveTelemetry } from '../lib/offlineStorage';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3333';
+
+/** Fallback when platform not yet loaded - Ras Laffan default */
+const FALLBACK_PLATFORM_POS = { lat: 25.905310475056915, lng: 51.543824178558054 };
 
 const HEARTBEAT_INTERVAL_MS = 5000;
 const WATCHDOG_TIMEOUT_MS = 12000;
@@ -93,33 +102,51 @@ export const useSocket = () => {
 
     socket.on('droneUpdate', (payload: IDrone) => {
       droneStore.updateDrone(payload);
-      // TODO Step 14: saveTelemetry(payload) when offline storage exists
+      saveTelemetry(payload).catch(() => {});
     });
 
     socket.on('drone:update', (payload: IDrone) => {
       droneStore.updateDrone(payload);
-      // TODO Step 14: saveTelemetry(payload) when offline storage exists
+      saveTelemetry(payload).catch(() => {});
+    });
+
+    socket.on('drone:status', (payload: { droneId: string; status: IDrone['status'] }) => {
+      const drone = useDroneStore.getState().drones.get(payload.droneId);
+      if (drone) {
+        useDroneStore.getState().updateDrone({ ...drone, status: payload.status });
+      }
     });
 
     socket.on('platform:status', (payload: IWeaponPlatform) => {
       platformStore.updatePlatform(payload);
     });
 
-    socket.on('drone:destroyed', (payload: { droneId: string }) => {
+    socket.on('drone:destroyed', (payload: { droneId: string; position?: { lat: number; lng: number; altitude: number }; droneType?: string }) => {
       playHitSound();
       playRichochetSounds();
-      const drone = droneStore.drones.get(payload.droneId);
-      if (drone) {
-        engagementLogStore.appendLog({
-          droneId: payload.droneId,
-          droneType: drone.droneType,
-          timestamp: new Date().toISOString(),
-          outcome: 'Destroyed',
-          distanceAtEngagement: 0,
-          hitPointsRemaining: 0,
-        });
-        droneStore.addDyingDrone(drone);
-      }
+      const drone = useDroneStore.getState().drones.get(payload.droneId);
+      const droneType = drone?.droneType ?? payload.droneType ?? 'Unknown';
+      engagementLogStore.appendLog({
+        droneId: payload.droneId,
+        droneType: droneType as IEngagementRecord['droneType'],
+        timestamp: new Date().toISOString(),
+        outcome: 'Destroyed',
+        distanceAtEngagement: 0,
+        hitPointsRemaining: 0,
+      });
+      const pos = payload.position ?? drone?.position;
+      if (!pos || typeof pos.lat !== 'number' || typeof pos.lng !== 'number') return;
+      const dyingDrone: IDrone = {
+        droneId: payload.droneId,
+        droneType: droneType as IDrone['droneType'],
+        status: 'Destroyed',
+        position: { lat: pos.lat, lng: pos.lng, altitude: pos.altitude ?? 0 },
+        speed: 0,
+        heading: 0,
+        threatLevel: 0,
+        lastUpdated: new Date().toISOString(),
+      };
+      droneStore.addDyingDrone(dyingDrone);
       droneStore.removeDrone(payload.droneId);
       const selectedId = useTargetStore.getState().selectedDroneId;
       if (selectedId === payload.droneId) {
@@ -137,10 +164,10 @@ export const useSocket = () => {
       }
     });
 
-    socket.on('drone:hit', (payload: { droneId: string; timestamp?: string; hitPointsRemaining?: number }) => {
+    socket.on('drone:hit', (payload: { droneId: string; timestamp?: string; hitPointsRemaining?: number; landingPosition?: { lat: number; lng: number } }) => {
       playHitSound();
       playRichochetSounds();
-      const drone = droneStore.drones.get(payload.droneId);
+      const drone = useDroneStore.getState().drones.get(payload.droneId);
       const record: IEngagementRecord = {
         droneId: payload.droneId,
         droneType: drone?.droneType ?? 'Unknown',
@@ -150,10 +177,20 @@ export const useSocket = () => {
         hitPointsRemaining: payload.hitPointsRemaining,
       };
       engagementLogStore.appendLog(record);
+      const plat = usePlatformStore.getState().platform;
+      const start = plat?.position ?? FALLBACK_PLATFORM_POS;
+      const pos = payload.landingPosition ?? { lat: start.lat, lng: start.lng };
+      useTracerStore.getState().addTracer({
+        startLat: start.lat,
+        startLng: start.lng,
+        endLat: pos.lat,
+        endLng: pos.lng,
+        outcome: 'Hit',
+      });
     });
 
-    socket.on('drone:missed', (payload: { droneId: string; timestamp?: string }) => {
-      const drone = droneStore.drones.get(payload.droneId);
+    socket.on('drone:missed', (payload: { droneId: string; timestamp?: string; landingPosition?: { lat: number; lng: number } }) => {
+      const drone = useDroneStore.getState().drones.get(payload.droneId);
       const record: IEngagementRecord = {
         droneId: payload.droneId,
         droneType: drone?.droneType ?? 'Unknown',
@@ -162,6 +199,16 @@ export const useSocket = () => {
         distanceAtEngagement: 0,
       };
       engagementLogStore.appendLog(record);
+      const plat = usePlatformStore.getState().platform;
+      const start = plat?.position ?? FALLBACK_PLATFORM_POS;
+      const pos = payload.landingPosition ?? { lat: start.lat, lng: start.lng };
+      useTracerStore.getState().addTracer({
+        startLat: start.lat,
+        startLng: start.lng,
+        endLat: pos.lat,
+        endLng: pos.lng,
+        outcome: 'Missed',
+      });
     });
 
     socket.on('heartbeat:pong', () => {
@@ -170,6 +217,10 @@ export const useSocket = () => {
         watchdogTimeout = null;
       }
       connectionStore.recordHeartbeat();
+    });
+
+    socket.on('simulation:rate', (payload: { eventsPerSec: number }) => {
+      connectionStore.setSimulationRate(payload.eventsPerSec);
     });
 
     return () => {

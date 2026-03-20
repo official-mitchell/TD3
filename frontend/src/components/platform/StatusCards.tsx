@@ -31,6 +31,7 @@ export const StatusCards: React.FC = () => {
   const platform = usePlatformStore((s) => s.platform);
   const status = useConnectionStore((s) => s.status);
   const lastHeartbeat = useConnectionStore((s) => s.lastHeartbeat);
+  const simulationRate = useConnectionStore((s) => s.simulationRate);
   const drones = useDroneStore((s) => s.drones);
   const log = useEngagementLogStore((s) => s.log);
 
@@ -145,19 +146,26 @@ export const StatusCards: React.FC = () => {
       </StatusCard>
 
       <StatusCard title="Connection">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className="inline-block w-2 h-2 rounded-full flex-shrink-0"
-            style={{
-              backgroundColor: connectionDotColor,
-              animation: status === 'Degraded' ? 'connection-blink 1s ease-in-out infinite' : undefined,
-            }}
-          />
-          <span className="text-sm" data-testid="connection-status">
-            {status === 'Offline' && lastHeartbeat !== null && offlineElapsed !== null
-              ? `LAST CONTACT: ${offlineElapsed}s ago`
-              : status}
-          </span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+              style={{
+                backgroundColor: connectionDotColor,
+                animation: status === 'Degraded' ? 'connection-blink 1s ease-in-out infinite' : undefined,
+              }}
+            />
+            <span className="text-sm" data-testid="connection-status">
+              {status === 'Offline' && lastHeartbeat !== null && offlineElapsed !== null
+                ? `LAST CONTACT: ${offlineElapsed}s ago`
+                : status}
+            </span>
+          </div>
+          {simulationRate > 0 && (
+            <div className="text-xs text-slate-500" data-testid="simulation-rate">
+              {simulationRate} drone updates/s
+            </div>
+          )}
         </div>
       </StatusCard>
     </div>

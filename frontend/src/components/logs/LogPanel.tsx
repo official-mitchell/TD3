@@ -2,31 +2,34 @@
  * Log panel. Engagement Log grouped by drone.
  * Per Implementation Plan 8.1.4, 10.5, 715–716.
  * Drone header with hits/misses list underneath. Collapsible. Skull + darken when defeated.
- * Format: "• Hit || Miss - TIME", hits show remaining HP. Unknown droneType hidden.
+ * Format: "• Hit || Miss - TIME", hits show remaining HP. Defeated: skull, red name, darker bg, auto-collapse.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useEngagementLogStore } from '../../store/engagementLogStore';
 import type { IEngagementRecord } from '@td3/shared-types';
 
-const EngagementHitMissRow: React.FC<{ entry: IEngagementRecord }> = ({ entry }) => {
+const EngagementHitMissRow: React.FC<{ entry: IEngagementRecord; roundNumber: number }> = ({ entry, roundNumber }) => {
   let timeStr = '--:--:--';
   try {
     timeStr = format(new Date(entry.timestamp), 'HH:mm:ss');
   } catch {
     // ignore
   }
-  const isHit = entry.outcome === 'Hit' || entry.outcome === 'Destroyed';
+  const isDestroyed = entry.outcome === 'Destroyed';
+  const isHit = entry.outcome === 'Hit' || isDestroyed;
   const hp = entry.hitPointsRemaining;
 
   return (
     <div className="flex items-center justify-between text-xs py-1 px-2 rounded">
-      {isHit ? (
+      {isDestroyed ? (
+        <span className="text-amber-400 font-medium">{roundNumber} ☠️ Destroyed</span>
+      ) : isHit ? (
         <span className="text-green-400">
-          • Hit{hp != null ? ` (${hp} HP)` : ''}
+          {roundNumber} Hit{hp != null ? ` (${hp} HP)` : ''}
         </span>
       ) : (
-        <span className="text-red-400">• Miss</span>
+        <span className="text-red-400">{roundNumber} Miss</span>
       )}
       <span className="text-slate-400">{timeStr}</span>
     </div>
@@ -37,13 +40,15 @@ const EngagementDroneGroup: React.FC<{
   droneId: string;
   droneType: string;
   entries: IEngagementRecord[];
-}> = ({ droneId, droneType, entries }) => {
-  const [expanded, setExpanded] = useState(true);
+}> = ({ droneId, entries }) => {
   const isDefeated = entries.some((e) => e.outcome === 'Destroyed');
+  const [expanded, setExpanded] = useState(!isDefeated);
+  useEffect(() => {
+    if (isDefeated) setExpanded(false);
+  }, [isDefeated]);
   const sortedEntries = useMemo(
     () =>
       [...entries]
-        .filter((e) => e.outcome !== 'Destroyed')
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [entries]
   );
@@ -51,7 +56,7 @@ const EngagementDroneGroup: React.FC<{
   return (
     <div
       className={`rounded-lg mb-3 overflow-hidden transition-colors ${
-        isDefeated ? 'bg-slate-800/90' : 'bg-slate-700/50'
+        isDefeated ? 'bg-slate-900/95' : 'bg-slate-700/50'
       }`}
     >
       <button
@@ -60,13 +65,9 @@ const EngagementDroneGroup: React.FC<{
         className="w-full flex items-center gap-2 p-3 border-b border-slate-600/50 text-left hover:bg-slate-600/30 cursor-pointer"
       >
         {isDefeated && (
-          <span className="text-amber-400 flex-shrink-0 inline-flex" title="Destroyed" aria-label="Destroyed">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400">
-              <path d="M12 2C8.5 2 6 4.5 6 8c0 2 1 3.5 2 4.5-.5 1-1 2-1 3.5 0 2.5 1.5 4 4 4s4-1.5 4-4c0-1.5-.5-2.5-1-3.5 1-1 2-2.5 2-4.5 0-3.5-2.5-6-6-6zm0 2c2.2 0 4 1.8 4 4 0 1.5-.8 2.8-1.5 3.5-.3.3-.5.7-.5 1.2v.3c0 .5.2 1 .5 1.3.5.5 1 1.2 1 2.2 0 1.4-.9 2.5-2.5 2.5s-2.5-1.1-2.5-2.5c0-1 .5-1.7 1-2.2.3-.3.5-.8.5-1.3v-.3c0-.5-.2-.9-.5-1.2C8.8 8.8 8 7.5 8 6c0-2.2 1.8-4 4-4zM9 10c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm6 0c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zM7 16l-2 4h14l-2-4H7z"/>
-            </svg>
-          </span>
+          <span className="text-amber-400 flex-shrink-0" title="Destroyed" aria-label="Destroyed">☠️</span>
         )}
-        <span className="font-medium">{droneId}</span>
+        <span className={`font-medium ${isDefeated ? 'text-red-500' : ''}`}>{droneId}</span>
         <span className="ml-auto text-slate-500 text-sm">
           {expanded ? '▼' : '▶'}
         </span>
@@ -76,8 +77,12 @@ const EngagementDroneGroup: React.FC<{
           {sortedEntries.length === 0 ? (
             <p className="text-xs text-slate-500 px-3 py-1">No rounds yet</p>
           ) : (
-            sortedEntries.map((entry) => (
-              <EngagementHitMissRow key={`${entry.timestamp}-${entry.outcome}`} entry={entry} />
+            sortedEntries.map((entry, idx) => (
+              <EngagementHitMissRow
+                key={`${entry.timestamp}-${entry.outcome}-${idx}`}
+                entry={entry}
+                roundNumber={sortedEntries.length - idx}
+              />
             ))
           )}
         </div>
@@ -118,6 +123,7 @@ export const LogPanel: React.FC = () => {
                 <EngagementDroneGroup
                   key={g.droneId}
                   droneId={g.droneId}
+                  droneType={g.entries[0]?.droneType ?? 'Unknown'}
                   entries={g.entries}
                 />
               ))

@@ -132,7 +132,7 @@ router.post('/drones/test', async (req: Request, res: Response) => {
       speed: 15.5,
       heading: 180,
       threatLevel: 0.5,
-      hitPoints: Math.floor(Math.random() * 10) + 1,
+      hitPoints: Math.floor(Math.random() * 3) + 1,
     });
     await testDrone.save();
     return res.json({ message: 'Test drone created', drone: testDrone });

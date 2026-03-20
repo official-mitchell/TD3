@@ -5,14 +5,17 @@
  * Loading overlay: 10-segment bar centered over map, fades out at 100%.
  * TelemetryOverlay: floating mini dashboard over map when drone selected.
  * MapFireButton: centered at bottom, Cmd/Ctrl+Enter, glowing + recoil animation.
+ * TracerOverlay: dotted lines + hit/miss markers. AccuracyCone: range cone aligned with turret.
+ * DyingDroneOverlay: shown when showDyingDrones (uiStore, default true).
  */
 import React, { useState, useEffect } from 'react';
-import { MapContainer as LeafletMap, TileLayer, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer as LeafletMap, TileLayer, ZoomControl, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
+import { useUIStore } from '../../store/uiStore';
 import { PlatformMarker } from './PlatformMarker';
 import { DroneMarker } from './DroneMarker';
 import { RangeCircles } from './RangeCircles';
@@ -20,6 +23,10 @@ import { LineOfFire } from './LineOfFire';
 import { TelemetryOverlay } from './TelemetryOverlay';
 import { MapFireButton } from './MapFireButton';
 import { AmmoOverlay } from './AmmoOverlay';
+import { DyingDroneOverlay } from './DyingDroneOverlay';
+import { TracerOverlay } from './TracerOverlay';
+import { AccuracyCone } from './AccuracyCone';
+import { FlightTrailOverlay } from './FlightTrailOverlay';
 
 // 7.1.2 Vite pitfall: fix Leaflet default marker icon 404s
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -95,14 +102,6 @@ const PlatformLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => 
   );
 };
 
-const ChangeCenter: React.FC<{ center: [number, number] }> = ({ center }) => {
-  const map = useMap();
-  React.useEffect(() => {
-    map.setView(center, map.getZoom());
-  }, [map, center]);
-  return null;
-};
-
 /** Click on map (not on drone) deselects target. Per Frontend Fix 708. */
 const MapClickToDeselect: React.FC = () => {
   const setSelected = useTargetStore((s) => s.setSelected);
@@ -121,28 +120,27 @@ const MapContent: React.FC = () => {
   const platform = usePlatformStore((s) => s.platform);
   const drones = useDroneStore((s) => s.drones);
   const selectedDroneId = useTargetStore((s) => s.selectedDroneId);
+  const showDyingDrones = useUIStore((s) => s.showDyingDrones);
 
   const effectivePlatform = platform ?? FALLBACK_PLATFORM;
-  const center: [number, number] = [
-    effectivePlatform.position.lat,
-    effectivePlatform.position.lng,
-  ];
 
-  const droneList = Array.from(drones.values());
-  const dyingDrones = useDroneStore((s) => s.dyingDrones);
-  const dyingDroneList = Array.from(dyingDrones.values());
+  const droneList = Array.from(drones.values()).filter(
+    (d) => d.status !== 'Hit' && d.status !== 'Destroyed'
+  );
   const selectedDrone = selectedDroneId ? drones.get(selectedDroneId) ?? null : null;
 
   return (
     <>
-      <ChangeCenter center={center} />
       <MapClickToDeselect />
       <RangeCircles platform={effectivePlatform} />
+      <AccuracyCone />
       <PlatformMarker platform={effectivePlatform} targetDrone={selectedDrone} />
       {platform && selectedDrone && (
         <LineOfFire platform={effectivePlatform} targetDrone={selectedDrone} />
       )}
       <TelemetryOverlay />
+      <TracerOverlay />
+      <FlightTrailOverlay />
       {droneList.map((drone) => (
         <DroneMarker
           key={drone.droneId}
@@ -151,24 +149,13 @@ const MapContent: React.FC = () => {
           isDying={false}
         />
       ))}
-      {dyingDroneList.map((drone) => (
-        <DroneMarker
-          key={`dying-${drone.droneId}`}
-          drone={drone}
-          isSelected={false}
-          isDying={true}
-        />
-      ))}
+      {showDyingDrones && <DyingDroneOverlay />}
     </>
   );
 };
 
 export const MapContainer: React.FC = () => {
   const platform = usePlatformStore((s) => s.platform);
-  const center: [number, number] = platform
-    ? [platform.position.lat, platform.position.lng]
-    : DEFAULT_CENTER;
-
   const platformLoading = platform === null;
 
   return (
@@ -177,7 +164,7 @@ export const MapContainer: React.FC = () => {
       <AmmoOverlay />
       <MapFireButton />
       <LeafletMap
-        center={center}
+        center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
         className="h-full w-full"
         scrollWheelZoom={true}

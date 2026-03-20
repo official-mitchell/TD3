@@ -1,14 +1,17 @@
 /**
- * Dashboard view. Per Implementation Plan 6.1–6.3.
+ * Dashboard view. Per Implementation Plan 6.1–6.3, 14.6.2.
  * Full-viewport flex layout with header, three-zone main row, bottom bar.
  * Responsive: at 768px sidebars become MUI Drawers.
  * Sidebar widths: left 308px (+10%), right 352px (+10%); middle flex-1. overflow-x-hidden on sidebars.
+ * OfflineBanner shown when connectionStore.status is Offline.
  */
 import React, { useState } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Drawer from '@mui/material/Drawer';
 import { Header } from '@components/layout/Header';
 import { BottomBar } from '@components/layout/BottomBar';
+import { OfflineBanner } from '@components/layout/OfflineBanner';
+import { useConnectionStore } from '../store/connectionStore';
 import { TargetPanel } from '@components/panels/TargetPanel';
 import { StatusPanel } from '@components/panels/StatusPanel';
 import { MapContainer } from '@components/map/MapContainer';
@@ -20,6 +23,7 @@ export const DashboardView: React.FC = () => {
   const isMobile = useMediaQuery('(max-width:768px)');
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
+  const status = useConnectionStore((s) => s.status);
 
   const leftSidebar = (
     <div className="w-[308px] flex-shrink-0 h-full overflow-y-auto overflow-x-hidden border-r border-[#1A3A5C]">
@@ -35,6 +39,7 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#0A0E1A] text-[#E8F4FD]">
+      {status === 'Offline' && <OfflineBanner />}
       <DieselAmbient />
       {/* 6.1.2 Header row — 11.1–11.3 Header with connection badge and drawer toggles */}
       <div className="flex items-center flex-shrink-0">

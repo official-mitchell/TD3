@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "dev": "docker compose up -d mongodb && nx run-many --target=serve --projects=frontend,backend --parallel=2"
+    "dev": "npm run dev:kill-port && docker compose up -d mongodb && nx run backend:serve & wait-on http://localhost:3333/api/health -t 60000 && nx run frontend:serve",
+    "dev:kill-port": "lsof -ti:3333 | xargs kill -9 2>/dev/null || true",
+    "dev:parallel": "docker compose up -d mongodb && nx run-many --target=serve --projects=frontend,backend --parallel=2"
   },
   "private": true,
   "devDependencies": {
@@ -58,7 +60,9 @@
     "tslib": "^2.3.0",
     "typescript": "~5.5.2",
     "vite": "~4.3.9",
-    "vitest": "~0.32.0"
+    "vite-plugin-pwa": "^0.20.5",
+    "vitest": "~0.32.0",
+    "wait-on": "^7.2.0"
   },
   "workspaces": [
     "packages/*"

@@ -90,4 +90,29 @@ describe('DroneMarker', () => {
     fireEvent.click(screen.getByTestId('drone-marker'));
     expect(useTargetStore.getState().selectedDroneId).toBe('DRONE-42');
   });
+
+  it('isDying: renders skull icon at drone last recorded position with large size (64px)', () => {
+    const lastPosition = { lat: 37.8, lng: -122.4, altitude: 100 };
+    const drone = createDrone({ droneId: 'DYING-1', position: lastPosition });
+    render(<DroneMarker drone={drone} isSelected={false} isDying={true} />);
+    expect(screen.getByTestId('drone-marker')).toBeTruthy();
+    expect(screen.getByTestId('drone-marker').getAttribute('data-lat')).toBe(String(lastPosition.lat));
+    expect(screen.getByTestId('drone-marker').getAttribute('data-lng')).toBe(String(lastPosition.lng));
+    expect(vi.mocked(L.divIcon)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        iconSize: [64, 64],
+        html: expect.stringMatching(/☠️/),
+      })
+    );
+  });
+
+  it('isDying: marker position aligns with drone.position (last known location)', () => {
+    const lat = 25.90531;
+    const lng = 51.54382;
+    const drone = createDrone({ position: { lat, lng, altitude: 200 } });
+    render(<DroneMarker drone={drone} isSelected={false} isDying={true} />);
+    const marker = screen.getByTestId('drone-marker');
+    expect(marker.getAttribute('data-lat')).toBe(String(lat));
+    expect(marker.getAttribute('data-lng')).toBe(String(lng));
+  });
 });
