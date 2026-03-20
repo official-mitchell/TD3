@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm install && npx nx build frontend",
+  "outputDirectory": "dist/frontend",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

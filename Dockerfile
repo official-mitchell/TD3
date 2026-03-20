@@ -1,6 +1,6 @@
 # TD3 Backend — Docker build for Render. Uses repo root as context.
-# Build stage
-FROM node:18-alpine AS build
+# Build stage — Node 20 required by smob, workbox-build, glob, jackspeak, lru-cache
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ COPY . .
 RUN npx nx build backend
 
 # Runtime stage
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 RUN mkdir -p /app/assets && chown -R node:node /app

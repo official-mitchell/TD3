@@ -1,5 +1,5 @@
-# Build stage
-FROM node:18-alpine as build
+# Build stage — Node 20 required by smob, workbox-build, glob, jackspeak, lru-cache
+FROM node:20-alpine as build
 
 WORKDIR /app
 

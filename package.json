@@ -2,6 +2,9 @@
   "name": "@td3/source",
   "version": "0.0.0",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "npm run dev:kill-port && docker compose up -d mongodb && nx run backend:serve & wait-on http://localhost:3333/api/health -t 60000 && nx run frontend:serve",
     "dev:kill-port": "lsof -ti:3333 | xargs kill -9 2>/dev/null || true",
