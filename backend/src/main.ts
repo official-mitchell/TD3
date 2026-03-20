@@ -1,7 +1,7 @@
 /**
  * TD3 Backend entry point. Phase 2.3: cleaned error middleware.
+ * CORS: uses CORS_ORIGIN in production (set to Vercel URL on Render). Logs warning if unset.
  * Default MONGODB_URI uses localhost for local dev; Docker Compose sets mongodb hostname.
- * CORS: added localhost:4200 for Vite dev server.
  */
 import express, { Request, Response, NextFunction } from 'express';
 import * as path from 'path';
@@ -51,14 +51,14 @@ mongoose.connection.on('disconnected', () => {
 // Middleware
 app.use(morgan('dev')); // Logging
 app.use(helmet()); // Security headers
-app.use(
-  cors({
-    origin:
-      process.env.NODE_ENV === 'production'
-        ? process.env.CORS_ORIGIN ?? false
-        : ['http://localhost:3000', 'http://localhost:4200', 'http://localhost:8000'],
-  })
-);
+const corsOrigin =
+  process.env.NODE_ENV === 'production'
+    ? process.env.CORS_ORIGIN || false
+    : ['http://localhost:3000', 'http://localhost:4200', 'http://localhost:8000'];
+if (process.env.NODE_ENV === 'production' && !corsOrigin) {
+  console.warn('CORS_ORIGIN not set in production — API/Socket requests from frontend will be blocked');
+}
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json()); // Body parsing
 app.use(express.urlencoded({ extended: true }));
 

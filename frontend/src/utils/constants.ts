@@ -6,11 +6,18 @@
 
 const PRODUCTION_API_URL = 'https://td3-2.onrender.com';
 
-/** Returns validated API/Socket base URL. Handles malformed VITE_SOCKET_URL (e.g. "https" only). */
+/** Returns validated API/Socket base URL. Handles malformed VITE_SOCKET_URL (e.g. "https", undefined). */
 export function getApiBaseUrl(): string {
-  const env = import.meta.env.VITE_SOCKET_URL ?? '';
-  if (env.startsWith('http') && env.includes('.') && !env.endsWith('://')) {
-    return env.replace(/\/$/, ''); // valid URL, trim trailing slash
+  const env = (import.meta.env.VITE_SOCKET_URL ?? '').trim();
+  try {
+    const url = env.startsWith('http') ? env : `https://${env}`;
+    const parsed = new URL(url);
+    // Hostname must be a real domain (has .) or localhost — rejects "https" as hostname
+    if (parsed.hostname && (parsed.hostname.includes('.') || parsed.hostname === 'localhost')) {
+      return parsed.origin;
+    }
+  } catch {
+    /* invalid URL, use fallback */
   }
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     return 'http://localhost:3333';
