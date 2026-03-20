@@ -1,6 +1,6 @@
 /**
  * Socket.IO service — telemetry simulation and engagement handling.
- * CORS: uses CORS_ORIGIN in production (same as Express) so Vercel frontend can connect.
+ * CORS: uses getCorsConfig() (normalized, same as Express). Socket.IO expects origin as array.
  * Phase 2.4: heartbeat:ping → heartbeat:pong. Added engagement:fire handler (Step 2.1).
  * createTestDrones: add-only (no delete of enemies), delete friendlies only, 6 enemy drones per batch.
  * Migrates legacy drones (hitPoints missing or 1) to random 1–3. HP capped at 3.
@@ -15,6 +15,7 @@
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import type { IPosition } from '@td3/shared-types';
+import { getCorsConfig } from '../lib/cors';
 import Drone, {
   IDrone,
   IDroneDocument,
@@ -74,10 +75,9 @@ export class SocketService {
   private static readonly ROUND_INTERVAL_MS = 300;
 
   constructor(server: HttpServer) {
-    const corsOrigin =
-      process.env.NODE_ENV === 'production'
-        ? process.env.CORS_ORIGIN || false
-        : ['http://localhost:3000', 'http://localhost:4200', 'http://localhost:5173', 'http://localhost:8000'];
+    const corsConfig = getCorsConfig();
+    // Socket.IO expects origin as string or array; pass array for single origin per docs
+    const corsOrigin = typeof corsConfig === 'string' ? [corsConfig] : corsConfig;
     this.io = new SocketServer(server, {
       cors: {
         origin: corsOrigin,

@@ -1,6 +1,6 @@
 /**
  * TD3 Backend entry point. Phase 2.3: cleaned error middleware.
- * CORS: uses CORS_ORIGIN in production (set to Vercel URL on Render). Logs warning if unset.
+ * CORS: uses CORS_ORIGIN in production (normalized: no trailing slash). Logs at startup.
  * Default MONGODB_URI uses localhost for local dev; Docker Compose sets mongodb hostname.
  */
 import express, { Request, Response, NextFunction } from 'express';
@@ -11,6 +11,7 @@ import helmet from 'helmet';
 import mongoose from 'mongoose';
 import droneRoutes from './routes/drone.routes';
 import SocketService from './services/socket-service';
+import { getCorsConfig } from './lib/cors';
 
 const app = express();
 
@@ -51,12 +52,9 @@ mongoose.connection.on('disconnected', () => {
 // Middleware
 app.use(morgan('dev')); // Logging
 app.use(helmet()); // Security headers
-const corsOrigin =
-  process.env.NODE_ENV === 'production'
-    ? process.env.CORS_ORIGIN || false
-    : ['http://localhost:3000', 'http://localhost:4200', 'http://localhost:8000'];
-if (process.env.NODE_ENV === 'production' && !corsOrigin) {
-  console.warn('CORS_ORIGIN not set in production — API/Socket requests from frontend will be blocked');
+const corsOrigin = getCorsConfig();
+if (process.env.NODE_ENV === 'production') {
+  console.log('CORS origin:', corsOrigin || 'NOT SET (requests from frontend will be blocked)');
 }
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json()); // Body parsing
