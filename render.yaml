@@ -1,13 +1,12 @@
 # TD3 Backend — Render Blueprint (Step 15.2)
-# Use "New > Blueprint" in Render Dashboard, connect this repo, and Render will create the service from this config.
+# Use "New > Blueprint" in Render Dashboard, connect this repo.
 # Add MONGODB_URI, CORS_ORIGIN in the Render Dashboard Environment tab (do not commit secrets).
+# Uses Docker because free tier may not expose Build/Start command fields in UI.
 services:
   - type: web
     name: td3-backend
-    runtime: node
-    rootDir: backend
-    buildCommand: npm install && npx tsc
-    startCommand: node dist/main.js
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: NODE_ENV
         value: production

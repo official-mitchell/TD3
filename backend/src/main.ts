@@ -55,7 +55,7 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === 'production'
-        ? 'your-production-domain'
+        ? process.env.CORS_ORIGIN ?? false
         : ['http://localhost:3000', 'http://localhost:4200', 'http://localhost:8000'],
   })
 );

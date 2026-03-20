@@ -1,5 +1,7 @@
+# TD3 Backend — Docker build. Requires repo ROOT as build context (Render: Root Directory = empty).
+# Dockerfile path: backend/Dockerfile
 # Build stage
-FROM node:18-alpine as build
+FROM node:18-alpine AS build
 
 WORKDIR /app
 
@@ -33,7 +35,7 @@ EXPOSE 3333
 CMD ["node", "main.js"]
 
 # # Build stage
-# FROM node:18-alpine as build
+# FROM node:18-alpine AS build
 
 # WORKDIR /app
 
@@ -82,7 +84,7 @@ CMD ["node", "main.js"]
 
 
 # # Build stage
-# FROM node:18-alpine as build
+# FROM node:18-alpine AS build
 
 # WORKDIR /app
 
