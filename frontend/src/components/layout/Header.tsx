@@ -15,8 +15,9 @@ import { LocationPicker } from '@components/settings/LocationPicker';
 import { useUIStore } from '../../store/uiStore';
 import { useDroneStore } from '../../store/droneStore';
 import { useTargetStore } from '../../store/targetStore';
+import { getApiBaseUrl } from '../../utils/constants';
 
-const API_BASE = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3333';
+const API_BASE = getApiBaseUrl();
 
 export interface HeaderProps {
   onOpenLeftPanel?: () => void;

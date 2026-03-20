@@ -7,8 +7,9 @@ import { TD3Logo } from '../ui/TD3Logo';
 import { useConnectionStore } from '../../store/connectionStore';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
+import { getApiBaseUrl } from '../../utils/constants';
 
-const API_BASE = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3333';
+const API_BASE = getApiBaseUrl();
 
 const STATUS_TOOLTIPS: Record<string, string> = {
   Connected: 'WebSocket connected; heartbeat OK',

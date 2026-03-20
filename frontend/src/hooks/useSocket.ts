@@ -19,8 +19,9 @@ import type { IDrone, IWeaponPlatform, IEngagementRecord } from '@td3/shared-typ
 import { setSocketRef } from '../lib/socketRef';
 import { playHitSound, playRichochetSounds } from '../lib/sounds';
 import { saveTelemetry } from '../lib/offlineStorage';
+import { getApiBaseUrl } from '../utils/constants';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3333';
+const SOCKET_URL = getApiBaseUrl();
 
 /** Fallback when platform not yet loaded - Ras Laffan default */
 const FALLBACK_PLATFORM_POS = { lat: 25.905310475056915, lng: 51.543824178558054 };

@@ -1,7 +1,22 @@
 /**
  * XM914E1 minigun real-life specs. Per Implementation Plan Frontend Fix 705.
  * PLATFORM_CONSTANTS.UPDATE_INTERVAL: 16ms for 60fps simulation tick rate.
+ * getApiBaseUrl: validates VITE_SOCKET_URL; fixes Vercel env truncation (e.g. "https" → production URL).
  */
+
+const PRODUCTION_API_URL = 'https://td3-2.onrender.com';
+
+/** Returns validated API/Socket base URL. Handles malformed VITE_SOCKET_URL (e.g. "https" only). */
+export function getApiBaseUrl(): string {
+  const env = import.meta.env.VITE_SOCKET_URL ?? '';
+  if (env.startsWith('http') && env.includes('.') && !env.endsWith('://')) {
+    return env.replace(/\/$/, ''); // valid URL, trim trailing slash
+  }
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:3333';
+  }
+  return PRODUCTION_API_URL;
+}
 export const MINIGUN_STATS = {
   RATE_OF_FIRE_SHOTS_PER_MIN: 200,
   MUZZLE_VELOCITY_M_S: 805,
