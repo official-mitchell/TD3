@@ -76,8 +76,9 @@ export class SocketService {
 
   constructor(server: HttpServer) {
     const corsConfig = getCorsConfig();
-    // Socket.IO expects origin as string or array; pass array for single origin per docs
-    const corsOrigin = typeof corsConfig === 'string' ? [corsConfig] : corsConfig;
+    // Socket.IO: "*" as string for allow-all; single origin as array per docs
+    const corsOrigin =
+      corsConfig === '*' ? '*' : typeof corsConfig === 'string' ? [corsConfig] : corsConfig;
     this.io = new SocketServer(server, {
       cors: {
         origin: corsOrigin,

@@ -53,8 +53,8 @@ mongoose.connection.on('disconnected', () => {
 app.use(morgan('dev')); // Logging
 app.use(helmet()); // Security headers
 const corsOrigin = getCorsConfig();
-if (process.env.NODE_ENV === 'production') {
-  console.log('CORS origin:', corsOrigin || 'NOT SET (requests from frontend will be blocked)');
+if (process.env.NODE_ENV === 'production' || process.env.CORS_ORIGIN) {
+  console.log('CORS origin:', corsOrigin === '*' ? '*' : corsOrigin || 'NOT SET (requests from frontend will be blocked)');
 }
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json()); // Body parsing
