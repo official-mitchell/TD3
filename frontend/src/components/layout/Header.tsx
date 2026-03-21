@@ -15,7 +15,7 @@ import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { getApiBaseUrl } from '../../utils/constants';
-import { error as logError } from '../../lib/logger';
+import { error as logError, getErrorMessage } from '../../lib/logger';
 
 const API_BASE = getApiBaseUrl();
 
@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
       });
       if (!res.ok) throw new Error('Failed to update location');
     } catch (err) {
-      logError('location.update.failed', { error: (err as Error).message });
+      logError('location.update.failed', { error: getErrorMessage(err) });
     }
   };
 
@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
       const res = await fetch(`${API_BASE}/api/platform/refill`, { method: 'PUT' });
       if (!res.ok) throw new Error('Failed to refill ammo');
     } catch (err) {
-      logError('refill.ammo.failed', { error: (err as Error).message });
+      logError('refill.ammo.failed', { error: getErrorMessage(err) });
     }
   };
 
@@ -81,8 +81,9 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         throw new Error(data.message ?? res.statusText);
       }
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to create targets');
-      logError('create.targets.failed', { error: (err as Error).message });
+      const errorMessage = getErrorMessage(err);
+      setCreateError(errorMessage === 'Unknown error' ? 'Failed to create targets' : errorMessage);
+      logError('create.targets.failed', { error: errorMessage });
     } finally {
       setCreateLoading(false);
     }
@@ -99,8 +100,9 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         throw new Error(data.message ?? res.statusText);
       }
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to create drones');
-      logError('create.drones.failed', { error: (err as Error).message });
+      const errorMessage = getErrorMessage(err);
+      setCreateError(errorMessage === 'Unknown error' ? 'Failed to create drones' : errorMessage);
+      logError('create.drones.failed', { error: errorMessage });
     } finally {
       setCreateLoading(false);
     }
@@ -114,7 +116,7 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
       useDroneStore.getState().clearDrones();
       useTargetStore.getState().setSelected(null);
     } catch (err) {
-      logError('clear.drones.failed', { error: (err as Error).message });
+      logError('clear.drones.failed', { error: getErrorMessage(err) });
     }
   };
 

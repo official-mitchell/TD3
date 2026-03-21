@@ -16,6 +16,7 @@ import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { useTracerStore } from '../../store/tracerStore';
+import { useDebugStore } from '../../store/debugStore';
 import { getSocket } from '../../lib/socketRef';
 import { log } from '../../lib/logger';
 import { playFireSound, playSwivelSound } from '../../lib/sounds';
@@ -94,6 +95,7 @@ export const MapFireButton: React.FC = () => {
     playFireSound();
     addOptimisticTracer(selectedDroneId);
     log('engagement.fire.emitted', { droneId: selectedDroneId });
+    useDebugStore.getState().setPendingFire(true);
     socket.emit('engagement:fire', { droneId: selectedDroneId, timestamp: new Date().toISOString() });
     setTimeout(() => {
       setRecoiling(false);

@@ -2,6 +2,7 @@
  * WebSocket hook — Socket.IO connection, event routing to stores, heartbeat lifecycle.
  * Per Implementation Plan 4.2, 4.3, 14.5.3, 18.3.2. saveTelemetry writes drone updates to IndexedDB for offline.
  * Phase 18.3.2: log socket.connected, socket.disconnected, socket.reconnecting, engagement.result, pwa.offline, pwa.restored.
+ * Per Implementation Plan Presentation 2.4: debugStore recordEvent, setSocketMeta, recordHeartbeat, setPendingFire, setLastOutcome.
  */
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
@@ -12,6 +13,7 @@ import { useTargetStore } from '../store/targetStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { useEngagementLogStore } from '../store/engagementLogStore';
 import { useTracerStore } from '../store/tracerStore';
+import { useDebugStore } from '../store/debugStore';
 import type { IDrone, IWeaponPlatform, IEngagementRecord } from '@td3/shared-types';
 import { setSocketRef } from '../lib/socketRef';
 import { playHitSound, playRichochetSounds } from '../lib/sounds';
@@ -45,9 +47,11 @@ export const useSocket = () => {
     const droneStore = useDroneStore.getState();
     const platformStore = usePlatformStore.getState();
     const engagementLogStore = useEngagementLogStore.getState();
+    const debugStore = useDebugStore.getState();
 
     let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
     let watchdogTimeout: ReturnType<typeof setTimeout> | null = null;
+    let lastPingAt = 0;
 
     const clearHeartbeat = () => {
       if (heartbeatInterval) {
@@ -63,6 +67,7 @@ export const useSocket = () => {
     const startHeartbeat = () => {
       clearHeartbeat();
       heartbeatInterval = setInterval(() => {
+        lastPingAt = Date.now();
         socket.emit('heartbeat:ping');
         watchdogTimeout = setTimeout(() => {
           connectionStore.setStatus('Degraded');
@@ -78,6 +83,7 @@ export const useSocket = () => {
       prevStatusRef.current = 'Connected';
       setSocketRef(socket);
       connectionStore.setStatus('Connected');
+      debugStore.setSocketMeta(socket.id ?? '', 0);
       startHeartbeat();
     });
 
@@ -91,6 +97,9 @@ export const useSocket = () => {
 
     socket.on('reconnect_attempt', (attempt: number) => {
       log('socket.reconnecting', { attempt });
+      connectionStore.incrementReconnect();
+      debugStore.recordEvent('reconnect_attempt', { attempt });
+      debugStore.setSocketMeta(socket.id ?? 'reconnecting', useConnectionStore.getState().reconnectAttempts);
     });
 
     socket.on('connect_error', () => {
@@ -112,16 +121,19 @@ export const useSocket = () => {
     });
 
     socket.on('droneUpdate', (payload: IDrone) => {
+      debugStore.recordEvent('droneUpdate', payload);
       droneStore.updateDrone(payload);
       saveTelemetry(payload).catch(() => {});
     });
 
     socket.on('drone:update', (payload: IDrone) => {
+      debugStore.recordEvent('drone:update', payload);
       droneStore.updateDrone(payload);
       saveTelemetry(payload).catch(() => {});
     });
 
     socket.on('drone:status', (payload: { droneId: string; status: IDrone['status'] }) => {
+      debugStore.recordEvent('drone:status', payload);
       const drone = useDroneStore.getState().drones.get(payload.droneId);
       if (drone) {
         useDroneStore.getState().updateDrone({ ...drone, status: payload.status });
@@ -129,10 +141,12 @@ export const useSocket = () => {
     });
 
     socket.on('platform:status', (payload: IWeaponPlatform) => {
+      debugStore.recordEvent('platform:status', payload);
       platformStore.updatePlatform(payload);
     });
 
     socket.on('drone:destroyed', (payload: { droneId: string; position?: { lat: number; lng: number; altitude: number }; droneType?: string }) => {
+      debugStore.recordEvent('drone:destroyed', payload);
       playHitSound();
       playRichochetSounds();
       const drone = useDroneStore.getState().drones.get(payload.droneId);
@@ -172,10 +186,14 @@ export const useSocket = () => {
         } else {
           useTargetStore.getState().nextTarget(sortedIds);
         }
+        useTargetStore.getState().resetToAuto();
       }
     });
 
     socket.on('drone:hit', (payload: { droneId: string; timestamp?: string; hitPointsRemaining?: number; landingPosition?: { lat: number; lng: number } }) => {
+      debugStore.recordEvent('drone:hit', payload);
+      debugStore.setPendingFire(false);
+      debugStore.setLastOutcome('Hit');
       log('engagement.result', { outcome: 'Hit', droneId: payload.droneId });
       playHitSound();
       playRichochetSounds();
@@ -229,7 +247,10 @@ export const useSocket = () => {
         clearTimeout(watchdogTimeout);
         watchdogTimeout = null;
       }
+      const latency = lastPingAt > 0 ? Date.now() - lastPingAt : 0;
       connectionStore.recordHeartbeat();
+      connectionStore.recordLatency(latency);
+      debugStore.recordHeartbeat(latency);
     });
 
     socket.on('simulation:rate', (payload: { eventsPerSec: number }) => {

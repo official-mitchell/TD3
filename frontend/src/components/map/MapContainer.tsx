@@ -18,7 +18,6 @@ import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { useUIStore } from '../../store/uiStore';
-import { useConnectionStore } from '../../store/connectionStore';
 import { useLoadingStore } from '../../store/loadingStore';
 import { PlatformMarker } from './PlatformMarker';
 import { DroneMarker } from './DroneMarker';
@@ -88,6 +87,7 @@ const PlatformLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => 
       const t = setTimeout(() => setHide(true), 250);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [visible, hasBeenVisible]);
 
   if (!hasBeenVisible && !visible) return null;

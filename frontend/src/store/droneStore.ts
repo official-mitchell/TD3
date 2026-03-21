@@ -5,6 +5,7 @@
  * getEngageableTargets: Engagement Ready only, altitude <= 500m, not friendly, sorted by threat descending.
  * dyingDrones: drones just destroyed, shown with skull + float animation for 3s.
  * droneTrails: position history per drone for flight path display (dotted line when selected).
+ * Per Implementation Plan Presentation 0.2.1–0.2.2: lastUpdateAt set on updateDrone.
  */
 import { enableMapSet } from 'immer';
 import { create } from 'zustand';
@@ -25,6 +26,7 @@ interface DroneState {
   drones: Map<string, IDrone>;
   dyingDrones: Map<string, IDrone>;
   droneTrails: Map<string, TrailPoint[]>;
+  lastUpdateAt: number;
   updateDrone: (drone: IDrone) => void;
   removeDrone: (droneId: string) => void;
   addDyingDrone: (drone: IDrone) => void;
@@ -43,10 +45,12 @@ export const useDroneStore = create<DroneState>()(
       drones: new Map(),
       dyingDrones: new Map(),
       droneTrails: new Map(),
+      lastUpdateAt: 0,
 
       updateDrone: (drone) =>
         set((state) => {
           state.drones.set(drone.droneId, drone);
+          state.lastUpdateAt = Date.now();
           const pos = drone.position;
           if (pos && typeof pos.lat === 'number' && typeof pos.lng === 'number') {
             let trail = state.droneTrails.get(drone.droneId);

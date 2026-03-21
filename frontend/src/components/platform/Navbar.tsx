@@ -8,7 +8,7 @@ import { useConnectionStore } from '../../store/connectionStore';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { getApiBaseUrl } from '../../utils/constants';
-import { error as logError } from '../../lib/logger';
+import { error as logError, getErrorMessage } from '../../lib/logger';
 
 const API_BASE = getApiBaseUrl();
 
@@ -34,7 +34,7 @@ export const Navbar: React.FC = () => {
       const platform = await res.json();
       updatePlatform(platform);
     } catch (err) {
-      logError('Update platform failed:', err);
+      logError('update.platform.failed', { error: getErrorMessage(err) });
     } finally {
       setUpdateLoading(false);
     }
@@ -52,8 +52,9 @@ export const Navbar: React.FC = () => {
         throw new Error(data.message ?? res.statusText);
       }
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to create test drones');
-      logError('create.test.drones.failed', { error: (err as Error).message });
+      const errorMessage = getErrorMessage(err);
+      setCreateError(errorMessage === 'Unknown error' ? 'Failed to create test drones' : errorMessage);
+      logError('create.test.drones.failed', { error: errorMessage });
     } finally {
       setCreateLoading(false);
     }

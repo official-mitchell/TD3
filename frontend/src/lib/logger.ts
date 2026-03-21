@@ -19,3 +19,8 @@ export function error(event: string, meta?: object): void {
   const entry = { event, ...(meta && { meta }), timestamp: new Date().toISOString() };
   console.error(`[error] ${entry.event}`, meta ?? '');
 }
+
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return typeof error === 'string' ? error : 'Unknown error';
+}
