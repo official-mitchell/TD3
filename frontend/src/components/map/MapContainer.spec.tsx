@@ -8,6 +8,7 @@ import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { useLoadingStore } from '../../store/loadingStore';
+import { useUIStore } from '../../store/uiStore';
 import type { IDrone, IWeaponPlatform } from '@td3/shared-types';
 
 const mockMap = {
@@ -20,8 +21,18 @@ const mockMap = {
 };
 
 vi.mock('react-leaflet', () => ({
-  MapContainer: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="leaflet-map">{children}</div>
+  MapContainer: ({
+    children,
+    center,
+    zoom,
+  }: {
+    children: React.ReactNode;
+    center?: [number, number];
+    zoom?: number;
+  }) => (
+    <div data-testid="leaflet-map" data-center={JSON.stringify(center)} data-zoom={String(zoom)}>
+      {children}
+    </div>
   ),
   ZoomControl: () => <div data-testid="zoom-control" />,
   TileLayer: ({ url }: { url: string }) => (
@@ -102,6 +113,21 @@ describe('MapContainer', () => {
     useDroneStore.setState({ drones: new Map(), droneTrails: new Map() });
     useTargetStore.setState({ selectedDroneId: null });
     useLoadingStore.setState({ soundsReady: true, platformReady: true, socketReady: true });
+    useUIStore.setState({ preSystemsState: null });
+  });
+
+  it('6.3.1: restores map center and zoom from preSystemsState when returning from Systems View', () => {
+    useUIStore.setState({
+      preSystemsState: {
+        selectedDroneId: 'D1',
+        mapCenter: [25.9, 51.5],
+        zoom: 12,
+      },
+    });
+    render(<MapContainer />);
+    const leafletMap = screen.getByTestId('leaflet-map');
+    expect(leafletMap.getAttribute('data-center')).toBe('[25.9,51.5]');
+    expect(leafletMap.getAttribute('data-zoom')).toBe('12');
   });
 
   it('loading overlay visible when resources not ready', () => {

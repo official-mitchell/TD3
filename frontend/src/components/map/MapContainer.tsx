@@ -11,7 +11,7 @@
  * Loading overlay now waits for sounds + platform + socket (loadingStore). QA metrics reported to backend.
  */
 import React, { useState, useEffect } from 'react';
-import { MapContainer as LeafletMap, TileLayer, ZoomControl, useMapEvents } from 'react-leaflet';
+import { MapContainer as LeafletMap, TileLayer, ZoomControl, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useDroneStore } from '../../store/droneStore';
@@ -19,6 +19,7 @@ import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { useUIStore } from '../../store/uiStore';
 import { useLoadingStore } from '../../store/loadingStore';
+import { useHighlight } from '../../hooks/useHighlight';
 import { PlatformMarker } from './PlatformMarker';
 import { DroneMarker } from './DroneMarker';
 import { RangeCircles } from './RangeCircles';
@@ -117,6 +118,24 @@ const PlatformLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => 
   );
 };
 
+/** Listens for td3:capture-map-state, captures Leaflet center/zoom, calls setMode. Per Implementation Plan Presentation 3.1.3. */
+const MapCaptureHandler: React.FC = () => {
+  const map = useMap();
+  useEffect(() => {
+    const handler = () => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      useUIStore.getState().setMode('systems-view', {
+        mapCenter: [center.lat, center.lng],
+        zoom,
+      });
+    };
+    window.addEventListener('td3:capture-map-state', handler);
+    return () => window.removeEventListener('td3:capture-map-state', handler);
+  }, [map]);
+  return null;
+};
+
 /** Click on map (not on drone) deselects target. Per Frontend Fix 708. */
 const MapClickToDeselect: React.FC = () => {
   const setSelected = useTargetStore((s) => s.setSelected);
@@ -146,6 +165,7 @@ const MapContent: React.FC = () => {
 
   return (
     <>
+      <MapCaptureHandler />
       <MapClickToDeselect />
       <RangeCircles platform={effectivePlatform} />
       <AccuracyCone />
@@ -172,16 +192,25 @@ const MapContent: React.FC = () => {
 export const MapContainer: React.FC = () => {
   const allReady = useLoadingStore((s) => s.soundsReady && s.platformReady && s.socketReady);
   const loading = !allReady;
+  const preSystemsState = useUIStore((s) => s.preSystemsState);
+  const { isHighlighted: droneIconsHighlighted } = useHighlight('drone-icons');
+
+  const initialCenter = preSystemsState?.mapCenter ?? DEFAULT_CENTER;
+  const initialZoom = preSystemsState?.zoom ?? DEFAULT_ZOOM;
 
   return (
-    <div className="relative h-full w-full bg-[#0F1929] min-h-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:rounded-none">
+    <div
+      className={`relative h-full w-full bg-[#0F1929] min-h-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:rounded-none ${
+        droneIconsHighlighted ? 'drone-icons-highlighted' : ''
+      }`}
+    >
       <PlatformLoadingOverlay visible={loading} />
       <AmmoOverlay />
       <SelectTargetHint />
       <MapFireButton />
       <LeafletMap
-        center={DEFAULT_CENTER}
-        zoom={DEFAULT_ZOOM}
+        center={initialCenter}
+        zoom={initialZoom}
         className="h-full w-full"
         scrollWheelZoom={true}
         zoomControl={false}

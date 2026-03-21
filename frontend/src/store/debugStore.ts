@@ -1,7 +1,8 @@
 /**
- * Debug store for presentation layer. Per Implementation Plan Presentation 2.1–2.3.
- * eventLog, eventRates, socket meta, heartbeat/latency, pendingFire, lastOutcome.
+ * Debug store for presentation layer. Per Implementation Plan Presentation 2.1–2.3, 2.5, 5.5.1.
+ * eventLog, eventRates, socket meta, heartbeat/latency, pendingFire, pendingFireSince, lastOutcome.
  * Rolling 10s event rate window; recordEvent severity: alert (hit/destroyed), warn (missed/reconnect), info (rest).
+ * __resetDebugStoreTimestamps for test isolation.
  */
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
@@ -16,6 +17,13 @@ const ALERT_EVENTS = new Set(['drone:hit', 'drone:destroyed']);
 const WARN_EVENTS = new Set(['drone:missed', 'reconnect_attempt']);
 
 const eventTimestamps: Record<string, number[]> = {};
+
+/** For testing: clears eventTimestamps so rate tests start fresh. */
+export function __resetDebugStoreTimestamps(): void {
+  for (const k of Object.keys(eventTimestamps)) {
+    delete eventTimestamps[k];
+  }
+}
 
 function getSeverity(event: string): DebugSeverity {
   if (ALERT_EVENTS.has(event)) return 'alert';
@@ -36,6 +44,8 @@ interface DebugState {
   lastHeartbeatAt: string | null;
   latencyMs: number | null;
   pendingFire: boolean;
+  /** Timestamp when pendingFire became true; used for 2s stale indicator (5.5.1) */
+  pendingFireSince: number | null;
   lastFireAt: string | null;
   lastOutcome: 'Hit' | 'Missed' | null;
   recordEvent: (event: string, payload: object) => void;
@@ -68,6 +78,7 @@ export const useDebugStore = create<DebugState>()(
         lastHeartbeatAt: null,
         latencyMs: null,
         pendingFire: false,
+        pendingFireSince: null,
         lastFireAt: null,
         lastOutcome: null,
 
@@ -102,7 +113,11 @@ export const useDebugStore = create<DebugState>()(
             latencyMs,
           }),
 
-        setPendingFire: (pending) => set({ pendingFire: pending }),
+        setPendingFire: (pending) =>
+          set((s) => ({
+            pendingFire: pending,
+            pendingFireSince: pending ? Date.now() : null,
+          })),
 
         setLastOutcome: (outcome) =>
           set({

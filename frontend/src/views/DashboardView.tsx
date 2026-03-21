@@ -4,8 +4,9 @@
  * Responsive: at 768px sidebars become MUI Drawers; floating carets on map edges open panels.
  * Sidebar widths: left 308px (+10%), right 352px (+10%); middle flex-1. overflow-x-hidden on sidebars.
  * OfflineBanner shown when connectionStore.status is Offline.
+ * 6.2.2: On mount, restores preSystemsState.selectedDroneId via targetStore.setSelected.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
@@ -15,11 +16,14 @@ import { Header } from '@components/layout/Header';
 import { BottomBar } from '@components/layout/BottomBar';
 import { OfflineBanner } from '@components/layout/OfflineBanner';
 import { useConnectionStore } from '../store/connectionStore';
+import { useUIStore } from '../store/uiStore';
+import { useTargetStore } from '../store/targetStore';
 import { TargetPanel } from '@components/panels/TargetPanel';
 import { StatusPanel } from '@components/panels/StatusPanel';
 import { MapContainer } from '@components/map/MapContainer';
 import { DieselAmbient } from '@components/audio/DieselAmbient';
 import { ErrorBoundary } from '@components/ErrorBoundary';
+import { DebugDrawer } from '@components/debug/DebugDrawer';
 
 const SIDEBAR_BORDER = '1px solid #1A3A5C';
 
@@ -28,6 +32,13 @@ export const DashboardView: React.FC = () => {
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
   const status = useConnectionStore((s) => s.status);
+
+  useEffect(() => {
+    const pre = useUIStore.getState().preSystemsState;
+    if (pre?.selectedDroneId) {
+      useTargetStore.getState().setSelected(pre.selectedDroneId);
+    }
+  }, []);
 
   const leftSidebar = (
     <div className="w-[308px] flex-shrink-0 h-full overflow-y-auto overflow-x-hidden border-r border-[#1A3A5C]">
@@ -114,6 +125,9 @@ export const DashboardView: React.FC = () => {
           <StatusPanel />
         </div>
       </Drawer>
+
+      {/* 3.4.3 Debug drawer overlay — stays on /dashboard, overlays operator UI */}
+      <DebugDrawer />
     </div>
   );
 };

@@ -17,6 +17,7 @@ import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { useTracerStore } from '../../store/tracerStore';
 import { useDebugStore } from '../../store/debugStore';
+import { useHighlight } from '../../hooks/useHighlight';
 import { getSocket } from '../../lib/socketRef';
 import { log } from '../../lib/logger';
 import { playFireSound, playSwivelSound } from '../../lib/sounds';
@@ -218,6 +219,7 @@ export const MapFireButton: React.FC = () => {
 
   const shortcut = getFireShortcutLabel();
   const buttonLabel = firing ? 'Firing' : canFire ? `FIRE ${shortcut}` : `NO TARGET ${shortcut}`;
+  const { isHighlighted } = useHighlight('fire-button');
 
   const noFireReason =
     !canFire && !firing && selectedDroneId
@@ -255,7 +257,9 @@ export const MapFireButton: React.FC = () => {
             ${firing ? 'fire-firing bg-amber-600 text-white cursor-not-allowed' : ''}
             ${canFire && !firing ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
             ${!canFire && !firing ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : ''}
+            ${isHighlighted ? 'highlight-pulse' : ''}
           `}
+        style={isHighlighted ? { outline: '2px solid #FFA726', boxShadow: '0 0 12px rgba(255,167,38,0.4)' } : undefined}
         >
           {buttonLabel}
         </button>

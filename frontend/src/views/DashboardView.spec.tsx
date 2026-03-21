@@ -2,6 +2,7 @@
  * DashboardView tests. Ensures sidebars have overflow-x-hidden and no horizontal scrollbar.
  * Integration: LocationPicker renders in front of map when opened.
  * Mobile: floating carets, drawers, fire button visibility.
+ * 6.3.1: Restores selectedDroneId from preSystemsState on mount.
  *
  * --- Changelog ---
  * 2025-03-20: Add mobile tests (carets, drawer open, useMediaQuery mock).
@@ -9,6 +10,8 @@
 import { vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DashboardView } from './DashboardView';
+import { useUIStore } from '../store/uiStore';
+import { useTargetStore } from '../store/targetStore';
 
 vi.mock('@components/map/MapContainer', () => ({
   MapContainer: () => (
@@ -35,6 +38,21 @@ describe('DashboardView', () => {
   it('should render without crashing', () => {
     render(<DashboardView />);
     expect(screen.getByTestId('map-container')).toBeTruthy();
+  });
+
+  it('6.3.1: restores selectedDroneId from preSystemsState on mount when returning from Systems View', () => {
+    useUIStore.setState({
+      preSystemsState: {
+        selectedDroneId: 'D1',
+        mapCenter: [25.9, 51.5],
+        zoom: 14,
+      },
+    });
+    useTargetStore.setState({ selectedDroneId: null });
+
+    render(<DashboardView />);
+
+    expect(useTargetStore.getState().selectedDroneId).toBe('D1');
   });
 
   it('sidebars should have overflow-x-hidden to prevent horizontal scrollbar', () => {

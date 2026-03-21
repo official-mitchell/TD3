@@ -1,21 +1,27 @@
 /**
- * Header bar. Left: TD3 logo + title. Right: Create Targets, hamburger menu (settings).
+ * Header bar. Left: TD3 logo + title. Right: Mode switcher (OPERATOR·SYSTEMS·DEBUG), Create Targets, hamburger menu.
  * Create Targets: only targettable drones (Engagement Ready, in range). Animated rotating stroke until first targets exist.
  * Settings: Create drones, Clear drones, etc. Mobile drawer toggles moved to DashboardView floating carets.
+ * Per Implementation Plan Presentation 3.1: ToggleButtonGroup for mode; td3:capture-map-state for systems-view.
+ * Per 4.1: SystemStatusBar below nav row, always visible.
  */
 import React, { useState, useMemo } from 'react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Slider from '@mui/material/Slider';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { TD3Logo } from '@components/ui/TD3Logo';
 import { HamburgerButton } from '@components/ui/HamburgerButton';
 import { LocationPicker } from '@components/settings/LocationPicker';
 import { useUIStore } from '../../store/uiStore';
+import { useConnectionStore } from '../../store/connectionStore';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { getApiBaseUrl } from '../../utils/constants';
 import { error as logError, getErrorMessage } from '../../lib/logger';
+import { SystemStatusBar } from './SystemStatusBar';
 
 const API_BASE = getApiBaseUrl();
 
@@ -37,6 +43,10 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
     return getEngageableTargets(center.lat, center.lng).length > 0;
   }, [platform, drones, getEngageableTargets]);
 
+  const activeMode = useUIStore((s) => s.activeMode);
+  const setMode = useUIStore((s) => s.setMode);
+  const setDebugDrawer = useUIStore((s) => s.setDebugDrawer);
+  const connectionStatus = useConnectionStore((s) => s.status);
   const weaponSize = useUIStore((s) => s.weaponSize);
   const droneSize = useUIStore((s) => s.droneSize);
   const soundVolume = useUIStore((s) => s.soundVolume);
@@ -45,6 +55,28 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   const setWeaponSize = useUIStore((s) => s.setWeaponSize);
   const setDroneSize = useUIStore((s) => s.setDroneSize);
   const setSoundVolume = useUIStore((s) => s.setSoundVolume);
+
+  const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: string | null) => {
+    if (!newMode) return;
+    if (newMode === 'systems-view') {
+      window.dispatchEvent(new CustomEvent('td3:capture-map-state'));
+    } else if (newMode === 'debug') {
+      setMode('debug');
+      setDebugDrawer(true);
+    } else {
+      setMode('operator');
+      setDebugDrawer(false);
+    }
+  };
+
+  const debugButtonColor =
+    activeMode === 'debug'
+      ? connectionStatus === 'Connected'
+        ? '#4CAF50'
+        : connectionStatus === 'Degraded'
+          ? '#FF9800'
+          : '#f44336'
+      : undefined;
 
   const handleMenuClose = () => setMenuAnchor(null);
 
@@ -121,8 +153,9 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   };
 
   return (
-    <header className="h-14 flex-shrink-0 w-full flex items-center justify-between px-4 bg-[#0F1929] border-b border-[#1A3A5C]">
-      {/* 11.1.1 Left zone: TD3 logo + full title */}
+    <div className="flex-shrink-0 w-full">
+      <header className="h-14 w-full flex items-center justify-between px-4 bg-[#0F1929] border-b border-[#1A3A5C]">
+        {/* 11.1.1 Left zone: TD3 logo + full title */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex-shrink-0">
           <TD3Logo />
@@ -133,6 +166,35 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         >
           TACTICAL DRONE DEFENSE DASHBOARD
         </span>
+      </div>
+
+      {/* Mode switcher: OPERATOR · SYSTEMS VIEW · DEBUG */}
+      <div className="flex items-center">
+        <ToggleButtonGroup
+          value={activeMode}
+          exclusive
+          onChange={handleModeChange}
+          size="small"
+          sx={{
+            '& .MuiToggleButton-root': {
+              color: '#7B9BB5',
+              borderColor: '#1A3A5C',
+              fontSize: '0.7rem',
+              py: 0.5,
+              px: 1.5,
+              '&.Mui-selected': { color: '#E8F4FD', bgcolor: '#1A3A5C' },
+            },
+          }}
+        >
+          <ToggleButton value="operator">OPERATOR</ToggleButton>
+          <ToggleButton value="systems-view">SYSTEMS VIEW</ToggleButton>
+          <ToggleButton
+            value="debug"
+            sx={debugButtonColor ? { '&.Mui-selected': { color: debugButtonColor } } : undefined}
+          >
+            DEBUG
+          </ToggleButton>
+        </ToggleButtonGroup>
       </div>
 
       {/* Right zone: Create Targets, drawer toggles (mobile), hamburger menu */}
@@ -242,6 +304,9 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
           onSelect={handleLocationSelect}
         />
       </div>
-    </header>
+      </header>
+      {/* 4.1 System status bar — always visible regardless of activeMode */}
+      <SystemStatusBar />
+    </div>
   );
 };

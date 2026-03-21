@@ -39,5 +39,10 @@ describe('Header', () => {
       render(<Header isMobile={true} />);
       expect(screen.getByRole('button', { name: /CREATE TARGETS/i })).toBeTruthy();
     });
+
+    it('4.1: System status bar renders below nav row', () => {
+      render(<Header />);
+      expect(screen.getByTestId('system-status-bar')).toBeTruthy();
+    });
   });
 });

@@ -1,12 +1,11 @@
 /**
- * Log panel. Engagement Log grouped by drone.
- * Per Implementation Plan 8.1.4, 10.5, 715–716.
- * Drone header with hits/misses list underneath. Collapsible. Skull + darken when defeated.
- * Format: "• Hit || Miss - TIME", hits show remaining HP. Defeated: skull, red name, darker bg, auto-collapse.
+ * Log panel. Engagement Log grouped by drone. Per Implementation Plan 8.1.4, 10.5, 715–716, 9.3.5.
+ * useHighlight('engagement-log') for cross-link from Systems View.
  */
 import React, { useMemo, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useEngagementLogStore } from '../../store/engagementLogStore';
+import { useHighlight } from '../../hooks/useHighlight';
 import type { IEngagementRecord } from '@td3/shared-types';
 
 const EngagementHitMissRow: React.FC<{ entry: IEngagementRecord; roundNumber: number }> = ({ entry, roundNumber }) => {
@@ -93,6 +92,7 @@ const EngagementDroneGroup: React.FC<{
 
 export const LogPanel: React.FC = () => {
   const log = useEngagementLogStore((s) => s.log);
+  const { isHighlighted } = useHighlight('engagement-log');
 
   const groups = useMemo(() => {
     const byDrone = new Map<string, IEngagementRecord[]>();
@@ -113,7 +113,13 @@ export const LogPanel: React.FC = () => {
   return (
     <div className="flex flex-col h-full min-w-0">
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex flex-col h-full bg-slate-800/80 rounded-lg p-4 border border-slate-700 overflow-hidden">
+        <div
+          className={`flex flex-col h-full bg-slate-800/80 rounded-lg p-4 border border-slate-700 overflow-hidden ${
+            isHighlighted ? 'highlight-pulse' : ''
+          }`}
+          style={isHighlighted ? { outline: '2px solid #FFA726', boxShadow: '0 0 12px rgba(255,167,38,0.4)' } : undefined}
+          data-testid="engagement-log"
+        >
           <h2 className="text-lg font-bold mb-4 flex-shrink-0">Engagement Log</h2>
           <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
             {groups.length === 0 ? (
