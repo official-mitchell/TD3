@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { error as logError } from '../../lib/logger';
 
 // Fix Leaflet default marker icons for Vite
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -94,7 +95,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({ open, onClose, o
         }))
       );
     } catch (err) {
-      console.error('Nominatim search failed:', err);
+      logError('nominatim.search.failed', { error: (err as Error).message });
       setResults([]);
     } finally {
       setSearching(false);

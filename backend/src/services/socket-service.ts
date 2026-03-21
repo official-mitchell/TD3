@@ -2,6 +2,7 @@
  * Socket.IO service — telemetry simulation and engagement handling.
  * CORS: uses getCorsConfig() (normalized, same as Express). Socket.IO expects origin as array.
  * Phase 2.4: heartbeat:ping → heartbeat:pong. Added engagement:fire handler (Step 2.1).
+ * Phase 18.1.3: structured logging for socket.connected, socket.disconnected, engagement.*, drone.statusChange, db.error.
  * createTestDrones: add-only (no delete of enemies), delete friendlies only, 6 enemy drones per batch.
  * Migrates legacy drones (hitPoints missing or 1) to random 1–3. HP capped at 3.
  * refillAmmo: sets ammo to 2000 and broadcasts platform:status.
@@ -12,10 +13,12 @@
  * simulation:rate emitted every second for droneUpdate events/sec monitoring.
  * Stable drone movement: all drones move via destinationPoint (heading + speed). Approach: nudge 8 deg/s. Cruise: arc turn ~30s.
  */
-import { Server as SocketServer } from 'socket.io';
+import { Server as SocketServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import type { IPosition } from '@td3/shared-types';
 import { getCorsConfig } from '../lib/cors';
+import { logger } from '../lib/logger';
+import { calculateHitProbability } from '../utils/engagementProbability';
 import Drone, {
   IDrone,
   IDroneDocument,
@@ -92,15 +95,23 @@ export class SocketService {
 
   private setupSocketHandlers() {
     this.io.on('connection', (socket) => {
-      console.log('Client connected');
+      logger.info('socket.connected', { socketId: socket.id });
 
-      this.emitInitialDroneData(socket);
-      if (this.platform) {
-        socket.emit('platform:status', this.platform);
+      try {
+        this.emitInitialDroneData(socket);
+        if (this.platform) {
+          socket.emit('platform:status', this.platform);
+        }
+      } catch (err) {
+        logger.error('db.error', { error: (err as Error).message, operation: 'emitInitialDroneData' });
       }
 
       socket.on('requestDroneUpdate', async (droneId: string) => {
-        await this.updateDrone(droneId);
+        try {
+          await this.updateDrone(droneId);
+        } catch (err) {
+          logger.error('db.error', { error: (err as Error).message, operation: 'requestDroneUpdate' });
+        }
       });
 
       socket.on('heartbeat:ping', () => {
@@ -108,15 +119,23 @@ export class SocketService {
       });
 
       socket.on('engagement:fire', async (payload: { droneId: string; timestamp?: string }) => {
-        await this.handleEngagementFire(payload.droneId, payload.timestamp ?? new Date().toISOString());
+        try {
+          await this.handleEngagementFire(payload.droneId, payload.timestamp ?? new Date().toISOString());
+        } catch (err) {
+          logger.error('engagement.fired', { error: (err as Error).message });
+        }
       });
 
       socket.on('engagement:destroy', async (payload: { droneId: string; position?: { lat: number; lng: number; altitude: number } }) => {
-        await this.handleEngagementDestroy(payload.droneId, payload.position);
+        try {
+          await this.handleEngagementDestroy(payload.droneId, payload.position);
+        } catch (err) {
+          logger.error('db.error', { error: (err as Error).message, operation: 'engagement:destroy' });
+        }
       });
 
-      socket.on('disconnect', () => {
-        console.log('Client disconnected');
+      socket.on('disconnect', (reason) => {
+        logger.info('socket.disconnected', { socketId: socket.id, reason });
       });
     });
   }
@@ -146,7 +165,7 @@ export class SocketService {
         if (isOldSf) {
           platform.position = SocketService.RAS_LAFFAN;
           await platform.save();
-          console.log('Migrated platform position from SF to Ras Laffan, Qatar');
+          logger.info('platform.migrated', { from: 'SF', to: 'Ras Laffan' });
         }
       }
       // Ensure IWeaponPlatform shape (legacy docs may lack ammoCount/killCount)
@@ -157,10 +176,10 @@ export class SocketService {
         ammoCount: platform.ammoCount ?? 2000,
         killCount: platform.killCount ?? 0,
       };
-      console.log('Weapon platform initialized:', this.platform);
+      logger.info('platform.initialized', { ammoCount: this.platform.ammoCount });
       this.io.emit('platform:status', this.platform);
     } catch (error) {
-      console.error('Error initializing weapon platform:', error);
+      logger.error('db.error', { error: (error as Error).message, operation: 'initializePlatform' });
     }
   }
 
@@ -186,7 +205,7 @@ export class SocketService {
       this.io.emit('platform:status', this.platform);
       return true;
     } catch (err) {
-      console.error('Refill ammo failed:', err);
+      logger.error('db.error', { error: (err as Error).message, operation: 'refillAmmo' });
       return false;
     }
   }
@@ -363,6 +382,12 @@ export class SocketService {
         }
 
         if (drone.status !== prevStatus) {
+          logger.info('drone.statusChange', {
+            droneId,
+            fromStatus: prevStatus,
+            toStatus: drone.status,
+            distanceMeters: distanceM,
+          });
           this.io.emit('drone:status', { droneId, status: drone.status });
         }
 
@@ -385,7 +410,7 @@ export class SocketService {
         this.emitDroneUpdate(drone);
       }
     } catch (error) {
-      console.error('Error updating drone:', error);
+      logger.error('db.error', { error: (error as Error).message, operation: 'updateDrone', droneId });
     }
   }
 
@@ -485,7 +510,7 @@ export class SocketService {
         this.io.emit('platform:status', this.platform);
       }
     } catch (err) {
-      console.error('engagement:destroy error:', err);
+      logger.error('db.error', { error: (err as Error).message, operation: 'engagement:destroy' });
     }
   }
 
@@ -495,6 +520,10 @@ export class SocketService {
       if (!drone || drone.status !== 'Engagement Ready' || !this.platform) {
         return;
       }
+      const distanceM = this.calculateDistance(drone.position, this.platform.position);
+      const hitProbability = calculateHitProbability(distanceM, drone.speed ?? 0);
+      logger.info('engagement.fired', { droneId, distanceMeters: distanceM, hitProbability });
+
       this.stopFiring();
       this.activeFiringDroneId = droneId;
 
@@ -525,12 +554,7 @@ export class SocketService {
         this.io.emit('platform:status', this.platform);
 
         const distanceM = this.calculateDistance(freshDrone.position, this.platform.position);
-        const rangeFactor = Math.max(0, 1 - distanceM / 2000);
-        const speedPenalty = freshDrone.speed / 500;
-        const baseHitProbability = Math.min(1, Math.max(0,
-          0.85 * rangeFactor * (1 - speedPenalty * 0.3)
-        ));
-        const hitProbability = baseHitProbability * 0.55; /* Higher accuracy for dependable targeting */
+        const hitProbability = calculateHitProbability(distanceM, freshDrone.speed ?? 0);
         const roll = Math.random();
         const isHit = roll <= hitProbability;
 
@@ -563,6 +587,7 @@ export class SocketService {
           });
 
           if (newHP <= 0) {
+            logger.info('engagement.hit', { droneId, timestamp: new Date().toISOString() });
             this.stopFiring();
             freshDrone.status = 'Hit';
             await freshDrone.save();
@@ -617,6 +642,7 @@ export class SocketService {
             });
           }
         } else {
+          logger.info('engagement.missed', { droneId, timestamp: new Date().toISOString() });
           await TelemetryLog.create({
             timestamp: new Date().toISOString(),
             droneId,
@@ -640,7 +666,7 @@ export class SocketService {
         await fireOneRound();
       }, SocketService.ROUND_INTERVAL_MS);
     } catch (error) {
-      console.error('Engagement fire error:', error);
+      logger.error('engagement.fired', { error: (error as Error).message });
       this.stopFiring();
     }
   }
@@ -654,18 +680,18 @@ export class SocketService {
           await this.updateDrone(drone.droneId, activeIds);
         }
       } catch (error) {
-        console.error('Simulation error:', error);
+        logger.error('db.error', { error: (error as Error).message, operation: 'simulation' });
       }
     }, this.simulationConfig.updateInterval);
   }
 
-  private async emitInitialDroneData(socket: any) {
+  private async emitInitialDroneData(socket: Socket) {
     try {
       // Import your Drone model at the top of the file
       const drones = await Drone.find().sort({ lastUpdated: -1 });
       socket.emit('initialDroneData', { drones });
     } catch (error) {
-      console.error('Error sending initial drone data:', error);
+      logger.error('db.error', { error: (error as Error).message, operation: 'emitInitialDroneData' });
       socket.emit('error', { message: 'Error fetching drone data' });
     }
   }
@@ -682,7 +708,16 @@ export class SocketService {
         .lean();
       this.io.emit('drones:replace', { drones });
     } catch (err) {
-      console.error('broadcastAllDrones error:', err);
+      logger.error('db.error', { error: (err as Error).message, operation: 'broadcastAllDrones' });
+    }
+  }
+
+  /** Phase 18.4.1: Active drone count for health endpoint. */
+  public async getActiveDroneCount(): Promise<number> {
+    try {
+      return await Drone.countDocuments({ status: { $nin: ['Hit', 'Destroyed'] } });
+    } catch {
+      return 0;
     }
   }
 
@@ -695,7 +730,7 @@ export class SocketService {
 
   public async createTestDrones() {
     try {
-      console.log('Starting drone creation...');
+      logger.info('drone.createTest', { operation: 'createTestDrones' });
       // Migrate legacy drones: set hitPoints 1–3 for any with missing, 1, or >3
       const randHP = () => Math.floor(Math.random() * 3) + 1;
       const legacy = await Drone.find({
@@ -710,12 +745,12 @@ export class SocketService {
         await d.save();
       }
       if (legacy.length > 0) {
-        console.log(`Migrated ${legacy.length} drone(s) to random hitPoints 1–3`);
+        logger.info('drone.migrated', { count: legacy.length });
       }
       // Delete only friendly drones; keep all enemy drones
       const deleted = await Drone.deleteMany({ isFriendly: true });
       if (deleted.deletedCount > 0) {
-        console.log(`Cleared ${deleted.deletedCount} friendly drone(s)`);
+        logger.info('drone.cleared', { count: deleted.deletedCount });
       }
 
       // Generate unique IDs per batch (add-only, never replace enemies)
@@ -789,26 +824,10 @@ export class SocketService {
         },
       ];
 
-      console.log(
-        'About to create drones:',
-        JSON.stringify(testDrones, null, 2)
-      );
-
       for (const droneData of testDrones) {
-        console.log(
-          `Creating drone: ${droneData.droneId} of type ${droneData.droneType}`
-        );
         const drone = new Drone(droneData);
-        const savedDrone = await drone.save();
-        console.log('Saved drone:', JSON.stringify(savedDrone, null, 2));
+        await drone.save();
       }
-
-      // Verify what's in the database
-      const allDrones = await Drone.find();
-      console.log(
-        'All drones in database:',
-        JSON.stringify(allDrones, null, 2)
-      );
 
       await this.broadcastAllDrones();
       return {
@@ -816,7 +835,7 @@ export class SocketService {
         count: testDrones.length,
       };
     } catch (error) {
-      console.error('Error creating test drones:', error);
+      logger.error('db.error', { error: (error as Error).message, operation: 'createTestDrones' });
       throw error;
     }
   }

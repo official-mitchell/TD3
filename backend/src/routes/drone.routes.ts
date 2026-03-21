@@ -1,5 +1,6 @@
 /**
  * Drone and platform REST routes. Phase 2.3: cleaned routes, standardized error handlers.
+ * Phase 18.1.4: logger.error in catch blocks before sendError.
  * PUT /platform/refill: refills ammo to 2000.
  * GET /drones/kills/verify: returns destroyed drones + platform killCount for verification.
  */
@@ -8,6 +9,7 @@ import Drone from '../models/drone.model';
 import TelemetryLog from '../models/telemetry-log.model';
 import WeaponPlatform from '../models/weapon-platform.model';
 import { sendError } from '../lib/errorHandler';
+import { logger } from '../lib/logger';
 import type { DroneStatus } from '@td3/shared-types';
 
 const VALID_DRONE_STATUSES: DroneStatus[] = [
@@ -44,7 +46,7 @@ router.post('/drones/test-targets', async (req: Request, res: Response) => {
     const result = await socketService.createTargettableDrones();
     return res.json(result);
   } catch (error) {
-    console.error('Error in test-targets endpoint:', error);
+    logger.error('route.error', { error: (error as Error).message, route: 'test-targets' });
     return sendError(res, 500, 'Error creating targettable drones', error);
   }
 });
@@ -54,6 +56,7 @@ router.get('/drones', async (req: Request, res: Response) => {
     const drones = await Drone.find().sort({ lastUpdated: -1 });
     return res.json(drones);
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'drones' });
     return sendError(res, 500, 'Error fetching drones', error);
   }
 });
@@ -66,6 +69,7 @@ router.get('/drones/status', async (req: Request, res: Response) => {
       drones: drones.map((d) => ({ id: d.droneId, status: d.status })),
     });
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'drones/status' });
     return sendError(res, 500, 'Error fetching drone status', error);
   }
 });
@@ -82,6 +86,7 @@ router.get('/drones/kills/verify', async (req: Request, res: Response) => {
       platformActive: !!platform,
     });
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'kills/verify' });
     return sendError(res, 500, 'Error verifying kills', error);
   }
 });
@@ -95,6 +100,7 @@ router.post('/drones/clear', async (req: Request, res: Response) => {
     }
     return res.json({ message: 'All drones cleared' });
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'drones/clear' });
     return sendError(res, 500, 'Error clearing drones', error);
   }
 });
@@ -107,6 +113,7 @@ router.get('/drones/:droneId', async (req: Request, res: Response) => {
     }
     return res.json(drone);
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'drones/:droneId' });
     return sendError(res, 500, 'Error fetching drone', error);
   }
 });
@@ -137,6 +144,7 @@ router.post('/drones/test', async (req: Request, res: Response) => {
     await testDrone.save();
     return res.json({ message: 'Test drone created', drone: testDrone });
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'drones/test' });
     return sendError(res, 500, 'Error creating test drone', error);
   }
 });
@@ -155,6 +163,7 @@ router.put('/drones/:droneId/status', async (req: Request, res: Response) => {
     await drone.save();
     return res.json(drone);
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'drones/:droneId/status' });
     return sendError(res, 500, 'Error updating drone status', error);
   }
 });
@@ -167,6 +176,7 @@ router.delete('/drones/:droneId', async (req: Request, res: Response) => {
     }
     return res.json({ message: 'Drone deleted successfully' });
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'drones/:droneId' });
     return sendError(res, 500, 'Error deleting drone', error);
   }
 });
@@ -177,6 +187,7 @@ router.post('/drones', async (req: Request, res: Response) => {
     await drone.save();
     return res.status(201).json(drone);
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'drones' });
     return sendError(res, 500, 'Error creating drone', error);
   }
 });
@@ -194,6 +205,7 @@ router.post('/platform/init', async (req: Request, res: Response) => {
     await platform.save();
     return res.json(platform);
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'platform/init' });
     return sendError(res, 500, 'Error initializing platform', error);
   }
 });
@@ -216,6 +228,7 @@ router.put('/platform/position', async (req: Request, res: Response) => {
     }
     return res.json(platform);
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'platform/position' });
     return sendError(res, 500, 'Error updating platform position', error);
   }
 });
@@ -232,6 +245,7 @@ router.put('/platform/refill', async (req: Request, res: Response) => {
     }
     return res.json({ message: 'Ammo refilled', ammoCount: 2000 });
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'platform/refill' });
     return sendError(res, 500, 'Error refilling ammo', error);
   }
 });
@@ -244,6 +258,7 @@ router.get('/platform/status', async (req: Request, res: Response) => {
     }
     return res.json(platform);
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'platform/status' });
     return sendError(res, 500, 'Error fetching platform status', error);
   }
 });
@@ -258,6 +273,7 @@ router.get('/platform/test', async (req: Request, res: Response) => {
       platformStatus: platform ? 'active' : 'not initialized',
     });
   } catch (error) {
+    logger.error('route.error', { error: (error as Error).message, route: 'platform/test' });
     return sendError(res, 500, 'Error fetching platform test data', error);
   }
 });

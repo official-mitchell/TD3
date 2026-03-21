@@ -8,6 +8,7 @@ import { useConnectionStore } from '../../store/connectionStore';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { getApiBaseUrl } from '../../utils/constants';
+import { error as logError } from '../../lib/logger';
 
 const API_BASE = getApiBaseUrl();
 
@@ -33,7 +34,7 @@ export const Navbar: React.FC = () => {
       const platform = await res.json();
       updatePlatform(platform);
     } catch (err) {
-      console.error('Update platform failed:', err);
+      logError('Update platform failed:', err);
     } finally {
       setUpdateLoading(false);
     }
@@ -52,7 +53,7 @@ export const Navbar: React.FC = () => {
       }
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create test drones');
-      console.error('Create test drones failed:', err);
+      logError('create.test.drones.failed', { error: (err as Error).message });
     } finally {
       setCreateLoading(false);
     }

@@ -1,6 +1,10 @@
 /**
  * DashboardView tests. Ensures sidebars have overflow-x-hidden and no horizontal scrollbar.
  * Integration: LocationPicker renders in front of map when opened.
+ * Mobile: floating carets, drawers, fire button visibility.
+ *
+ * --- Changelog ---
+ * 2025-03-20: Add mobile tests (carets, drawer open, useMediaQuery mock).
  */
 import { vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -14,8 +18,9 @@ vi.mock('@components/map/MapContainer', () => ({
   ),
 }));
 
+const mockUseMediaQuery = vi.fn(() => false);
 vi.mock('@mui/material/useMediaQuery', () => ({
-  default: () => false,
+  default: (query: string) => mockUseMediaQuery(query),
 }));
 
 vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })));
@@ -23,6 +28,7 @@ vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ json: () => Promise.resolve
 describe('DashboardView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseMediaQuery.mockReturnValue(false);
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })));
   });
 
@@ -59,5 +65,35 @@ describe('DashboardView', () => {
     const overlayZ = Number(window.getComputedStyle(overlay).zIndex);
     expect(overlayZ).toBeGreaterThan(700);
     expect(overlay.parentElement).toBe(document.body);
+  });
+
+  describe('Mobile (max-width: 768px)', () => {
+    beforeEach(() => {
+      mockUseMediaQuery.mockReturnValue(true);
+    });
+
+    it('shows floating carets for priority targets and engagement log', () => {
+      render(<DashboardView />);
+      expect(screen.getByLabelText('Open priority targets')).toBeTruthy();
+      expect(screen.getByLabelText('Open engagement log')).toBeTruthy();
+    });
+
+    it('left caret opens target panel drawer', () => {
+      render(<DashboardView />);
+      fireEvent.click(screen.getByLabelText('Open priority targets'));
+      expect(screen.getByText('Priority Targets')).toBeTruthy();
+    });
+
+    it('right caret opens engagement log drawer', () => {
+      render(<DashboardView />);
+      fireEvent.click(screen.getByLabelText('Open engagement log'));
+      expect(screen.getByText('Engagement Log')).toBeTruthy();
+    });
+
+    it('renders map without persistent sidebars (drawers overlay on demand)', () => {
+      render(<DashboardView />);
+      expect(screen.getByTestId('map-container')).toBeTruthy();
+      expect(screen.getByLabelText('Open priority targets')).toBeTruthy();
+    });
   });
 });

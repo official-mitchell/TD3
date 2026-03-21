@@ -31,6 +31,6 @@ describe('SpeedGauge', () => {
 
   it('respects max prop for scale', () => {
     render(<SpeedGauge value={150} max={200} />);
-    expect(screen.getByText('150')).toBeTruthy();
+    expect(screen.getAllByText('150').length).toBeGreaterThanOrEqual(1);
   });
 });

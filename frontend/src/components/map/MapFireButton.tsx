@@ -17,8 +17,13 @@ import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { useTracerStore } from '../../store/tracerStore';
 import { getSocket } from '../../lib/socketRef';
+import { log } from '../../lib/logger';
 import { playFireSound, playSwivelSound } from '../../lib/sounds';
+import { calculateBearing } from '../../utils/calculations';
 import { PLATFORM_CONSTANTS } from '../../utils/constants';
+
+/** Engagement cone half-angle (deg). Target must be within ±CONE_HALF_ANGLE of turret heading. */
+const CONE_HALF_ANGLE_DEG = 4;
 
 const FALLBACK_PLATFORM_POS = { lat: 25.905310475056915, lng: 51.543824178558054 };
 
@@ -31,6 +36,7 @@ const getFireShortcutLabel = (): string =>
 export const MapFireButton: React.FC = () => {
   const drones = useDroneStore((s) => s.drones);
   const platform = usePlatformStore((s) => s.platform);
+  const currentTurretHeading = usePlatformStore((s) => s.currentTurretHeading);
   const selectedDroneId = useTargetStore((s) => s.selectedDroneId);
   const nextTarget = useTargetStore((s) => s.nextTarget);
   const prevTarget = useTargetStore((s) => s.prevTarget);
@@ -44,8 +50,17 @@ export const MapFireButton: React.FC = () => {
   );
   const selectedDrone = selectedDroneId ? drones.get(selectedDroneId) : null;
 
+  const targetInCone = useMemo(() => {
+    if (!selectedDrone || !platform?.position) return false;
+    const bearing = calculateBearing(platform.position, selectedDrone.position).degrees;
+    let diff = Math.abs(bearing - currentTurretHeading);
+    if (diff > 180) diff = 360 - diff;
+    return diff <= CONE_HALF_ANGLE_DEG;
+  }, [selectedDrone, platform?.position, currentTurretHeading]);
+
   const canFire =
     selectedDrone?.status === 'Engagement Ready' &&
+    targetInCone &&
     !firing &&
     (platform?.isActive ?? false) === true;
 
@@ -78,6 +93,7 @@ export const MapFireButton: React.FC = () => {
     usePlatformStore.getState().setTurretRecoiling(true);
     playFireSound();
     addOptimisticTracer(selectedDroneId);
+    log('engagement.fire.emitted', { droneId: selectedDroneId });
     socket.emit('engagement:fire', { droneId: selectedDroneId, timestamp: new Date().toISOString() });
     setTimeout(() => {
       setRecoiling(false);
@@ -202,10 +218,8 @@ export const MapFireButton: React.FC = () => {
   const buttonLabel = firing ? 'Firing' : canFire ? `FIRE ${shortcut}` : `NO TARGET ${shortcut}`;
 
   const noFireReason =
-    !canFire && !firing
-      ? !selectedDroneId
-        ? 'Select a target from the list'
-        : !(platform?.isActive ?? false)
+    !canFire && !firing && selectedDroneId
+      ? !(platform?.isActive ?? false)
           ? 'Platform offline'
           : selectedDrone && selectedDrone.status !== 'Engagement Ready'
             ? (() => {
@@ -218,12 +232,14 @@ export const MapFireButton: React.FC = () => {
                 if (isFriendly) reasons.push('Friendly drone');
                 return reasons.length > 0 ? reasons.join(' · ') : 'Target must be Engagement Ready';
               })()
-            : null
+            : selectedDrone && selectedDrone.status === 'Engagement Ready' && !targetInCone
+              ? 'Align turret to target'
+              : null
       : null;
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 z-[600] pointer-events-none flex flex-col items-center justify-end pb-2"
+      className="absolute bottom-0 left-0 right-0 z-[600] pointer-events-none flex flex-col items-center justify-end pb-10 sm:pb-2"
       data-testid="map-fire-button"
     >
       <button
@@ -252,4 +268,6 @@ export const MapFireButton: React.FC = () => {
 
 /* --- Changelog ---
  * 2025-03-19: Add optimistic tracers on fire and every 300ms during burst for instant feedback (fixes tracer lag).
+ * 2025-03-20: Mobile: increase bottom padding (pb-10) so fire button stays in viewport.
+ * 2025-03-20: Remove "Select a target from the list" from noFireReason; SelectTargetHint shows instead.
  */

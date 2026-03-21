@@ -3,17 +3,11 @@
  * CORS: uses CORS_ORIGIN in production (normalized: no trailing slash). Logs at startup.
  * Default MONGODB_URI uses localhost for local dev; Docker Compose sets mongodb hostname.
  */
-import express, { Request, Response, NextFunction } from 'express';
-import * as path from 'path';
-import cors from 'cors';
-import morgan from 'morgan';
-import helmet from 'helmet';
 import mongoose from 'mongoose';
-import droneRoutes from './routes/drone.routes';
+import { createApp } from './app';
 import SocketService from './services/socket-service';
-import { getCorsConfig } from './lib/cors';
 
-const app = express();
+const app = createApp();
 
 // MongoDB connection
 const mongoUri =
@@ -49,39 +43,11 @@ mongoose.connection.on('disconnected', () => {
   console.log('Mongoose disconnected from MongoDB');
 });
 
-// Middleware
-app.use(morgan('dev')); // Logging
-app.use(helmet()); // Security headers
-const corsOrigin = getCorsConfig();
+const { getCorsConfig } = require('./lib/cors');
 if (process.env.NODE_ENV === 'production' || process.env.CORS_ORIGIN) {
+  const corsOrigin = getCorsConfig();
   console.log('CORS origin:', corsOrigin === '*' ? '*' : corsOrigin || 'NOT SET (requests from frontend will be blocked)');
 }
-app.use(cors({ origin: corsOrigin }));
-app.use(express.json()); // Body parsing
-app.use(express.urlencoded({ extended: true }));
-
-// Static files
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
-
-// Error handling middleware (catches errors passed to next())
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined,
-  });
-});
-
-app.use('/api', droneRoutes);
-
-// Health check endpoint
-app.get('/api/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-app.get('/api', (_req: Request, res: Response) => {
-  res.json({ message: 'Welcome to backend!' });
-});
 
 const port = process.env.PORT || 3333;
 const server = app.listen(port, () => {

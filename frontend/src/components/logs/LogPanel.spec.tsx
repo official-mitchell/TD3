@@ -63,7 +63,7 @@ describe('LogPanel', () => {
       ],
     });
     render(<LogPanel />);
-    expect(screen.getByText('Destroyed')).toBeTruthy();
+    expect(screen.getByLabelText('Destroyed')).toBeTruthy();
     expect(screen.queryByText('No rounds yet')).toBeNull();
     const expandIcon = screen.getByText('▶');
     expect(expandIcon).toBeTruthy();

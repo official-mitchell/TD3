@@ -2,11 +2,13 @@
  * Leaflet map container. Per Implementation Plan 7.
  * Platform marker (IFV + minigun turret), drone markers, range circles (2km/5km), line of fire.
  * Fallback platform ensures IFV, turret, range circles always visible before socket connects.
- * Loading overlay: 10-segment bar centered over map, fades out at 100%.
- * TelemetryOverlay: floating mini dashboard over map when drone selected.
+ * Loading overlay: 10-segment bar centered over map, fades only when priority targets have loaded
+ *   (platform + socket connected). TelemetryOverlay: floating mini dashboard over map when drone selected.
  * MapFireButton: centered at bottom, Cmd/Ctrl+Enter, glowing + recoil animation.
  * TracerOverlay: dotted lines + hit/miss markers. AccuracyCone: range cone aligned with turret.
  * DyingDroneOverlay: shown when showDyingDrones (uiStore, default true).
+ * SelectTargetHint: single message when no target selected (create targets or select from map/list).
+ * Loading overlay now waits for sounds + platform + socket (loadingStore). QA metrics reported to backend.
  */
 import React, { useState, useEffect } from 'react';
 import { MapContainer as LeafletMap, TileLayer, ZoomControl, useMapEvents } from 'react-leaflet';
@@ -16,12 +18,15 @@ import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { useUIStore } from '../../store/uiStore';
+import { useConnectionStore } from '../../store/connectionStore';
+import { useLoadingStore } from '../../store/loadingStore';
 import { PlatformMarker } from './PlatformMarker';
 import { DroneMarker } from './DroneMarker';
 import { RangeCircles } from './RangeCircles';
 import { LineOfFire } from './LineOfFire';
 import { TelemetryOverlay } from './TelemetryOverlay';
 import { MapFireButton } from './MapFireButton';
+import { SelectTargetHint } from './SelectTargetHint';
 import { AmmoOverlay } from './AmmoOverlay';
 import { DyingDroneOverlay } from './DyingDroneOverlay';
 import { TracerOverlay } from './TracerOverlay';
@@ -58,30 +63,40 @@ const PlatformLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => 
   const [filled, setFilled] = useState(0);
   const [fadeOut, setFadeOut] = useState(false);
   const [hide, setHide] = useState(false);
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
 
   useEffect(() => {
-    if (!visible) return;
-    setHide(false);
-    setFadeOut(false);
-    setFilled(0);
-    const interval = setInterval(() => {
-      setFilled((f) => {
-        if (f >= LOADING_SEGMENTS - 1) {
-          clearInterval(interval);
-          setFadeOut(true);
-          setTimeout(() => setHide(true), 250);
-          return LOADING_SEGMENTS;
-        }
-        return f + 1;
-      });
-    }, 120);
-    return () => clearInterval(interval);
-  }, [visible]);
+    if (visible) {
+      setHasBeenVisible(true);
+      setHide(false);
+      setFadeOut(false);
+      setFilled(0);
+      const interval = setInterval(() => {
+        setFilled((f) => {
+          if (f >= LOADING_SEGMENTS - 1) {
+            clearInterval(interval);
+            return LOADING_SEGMENTS;
+          }
+          return f + 1;
+        });
+      }, 120);
+      return () => clearInterval(interval);
+    } else if (hasBeenVisible) {
+      // Priority targets loaded — complete fill and fade out
+      setFilled(LOADING_SEGMENTS);
+      setFadeOut(true);
+      const t = setTimeout(() => setHide(true), 250);
+      return () => clearTimeout(t);
+    }
+  }, [visible, hasBeenVisible]);
 
-  if (!visible || hide) return null;
+  if (!hasBeenVisible && !visible) return null;
+  if (hide) return null;
+  if (!visible && !fadeOut) return null;
 
   return (
     <div
+      data-testid="platform-loading-overlay"
       className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1000]"
       aria-hidden
     >
@@ -155,13 +170,14 @@ const MapContent: React.FC = () => {
 };
 
 export const MapContainer: React.FC = () => {
-  const platform = usePlatformStore((s) => s.platform);
-  const platformLoading = platform === null;
+  const allReady = useLoadingStore((s) => s.soundsReady && s.platformReady && s.socketReady);
+  const loading = !allReady;
 
   return (
     <div className="relative h-full w-full bg-[#0F1929] min-h-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:rounded-none">
-      <PlatformLoadingOverlay visible={platformLoading} />
+      <PlatformLoadingOverlay visible={loading} />
       <AmmoOverlay />
+      <SelectTargetHint />
       <MapFireButton />
       <LeafletMap
         center={DEFAULT_CENTER}

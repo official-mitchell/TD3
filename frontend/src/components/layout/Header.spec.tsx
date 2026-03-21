@@ -3,7 +3,7 @@
  * Connection badge removed per hamburger menu redesign.
  */
 import { vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { Header } from './Header';
 
 vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })));
@@ -35,37 +35,9 @@ describe('Header', () => {
       expect(header?.className).toContain('w-full');
     });
 
-    it('11.3.3: On mobile, drawer toggle buttons are visible and functional', () => {
-      const onOpenLeft = vi.fn();
-      const onOpenRight = vi.fn();
-      render(
-        <Header
-          isMobile={true}
-          onOpenLeftPanel={onOpenLeft}
-          onOpenRightPanel={onOpenRight}
-        />
-      );
-      const leftBtn = screen.getByLabelText('Open target panel');
-      const rightBtn = screen.getByLabelText('Open status panel');
-      expect(leftBtn).toBeTruthy();
-      expect(rightBtn).toBeTruthy();
-
-      fireEvent.click(leftBtn);
-      expect(onOpenLeft).toHaveBeenCalledTimes(1);
-      fireEvent.click(rightBtn);
-      expect(onOpenRight).toHaveBeenCalledTimes(1);
-    });
-
-    it('hides drawer toggles when not mobile', () => {
-      render(
-        <Header
-          isMobile={false}
-          onOpenLeftPanel={vi.fn()}
-          onOpenRightPanel={vi.fn()}
-        />
-      );
-      expect(screen.queryByLabelText('Open target panel')).toBeNull();
-      expect(screen.queryByLabelText('Open status panel')).toBeNull();
+    it('11.3.3: Header renders on mobile (drawer toggles moved to DashboardView carets)', () => {
+      render(<Header isMobile={true} />);
+      expect(screen.getByRole('button', { name: /CREATE TARGETS/i })).toBeTruthy();
     });
   });
 });

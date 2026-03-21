@@ -149,6 +149,7 @@ export const StatusCards: React.FC = () => {
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span
+              data-testid="connection-dot"
               className="inline-block w-2 h-2 rounded-full flex-shrink-0"
               style={{
                 backgroundColor: connectionDotColor,

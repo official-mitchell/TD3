@@ -6,6 +6,7 @@ import { usePlatformStore } from '../store/platformStore';
 import { useTargetStore } from '../store/targetStore';
 import { useDroneStore } from '../store/droneStore';
 import { calculateBearing } from '../utils/calculations';
+import { error as logError } from '../lib/logger';
 
 type TurretStatus = 'IDLE' | 'TARGETING' | 'FIRING';
 
@@ -27,7 +28,7 @@ export const usePlatform = () => {
           updatePlatform(data.platform);
         }
       } catch (error) {
-        console.error('Failed to initialize platform:', error);
+        logError('platform.init.failed', { error: (error as Error).message });
       }
     };
     initPlatform();

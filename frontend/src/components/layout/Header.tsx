@@ -1,40 +1,42 @@
 /**
- * Header bar. Left: TD3 logo + title. Right: Create Targets, hamburger menu (settings), drawer toggles (mobile).
- * Create Targets: only targettable drones (Engagement Ready, in range). Settings: Create drones, Clear drones, etc.
+ * Header bar. Left: TD3 logo + title. Right: Create Targets, hamburger menu (settings).
+ * Create Targets: only targettable drones (Engagement Ready, in range). Animated rotating stroke until first targets exist.
+ * Settings: Create drones, Clear drones, etc. Mobile drawer toggles moved to DashboardView floating carets.
  */
-import React, { useState } from 'react';
-import IconButton from '@mui/material/IconButton';
+import React, { useState, useMemo } from 'react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Slider from '@mui/material/Slider';
-import MenuIcon from '@mui/icons-material/Menu';
-import ListIcon from '@mui/icons-material/List';
 import { TD3Logo } from '@components/ui/TD3Logo';
 import { HamburgerButton } from '@components/ui/HamburgerButton';
 import { LocationPicker } from '@components/settings/LocationPicker';
 import { useUIStore } from '../../store/uiStore';
 import { useDroneStore } from '../../store/droneStore';
+import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
 import { getApiBaseUrl } from '../../utils/constants';
+import { error as logError } from '../../lib/logger';
 
 const API_BASE = getApiBaseUrl();
 
 export interface HeaderProps {
-  onOpenLeftPanel?: () => void;
-  onOpenRightPanel?: () => void;
   isMobile?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({
-  onOpenLeftPanel,
-  onOpenRightPanel,
-  isMobile = false,
-}) => {
+export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const menuOpen = Boolean(menuAnchor);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const platform = usePlatformStore((s) => s.platform);
+  const drones = useDroneStore((s) => s.drones);
+  const getEngageableTargets = useDroneStore((s) => s.getEngageableTargets);
+  const hasEngageableTargets = useMemo(() => {
+    const center = platform?.position ?? { lat: 25.905310475056915, lng: 51.543824178558054 };
+    return getEngageableTargets(center.lat, center.lng).length > 0;
+  }, [platform, drones, getEngageableTargets]);
+
   const weaponSize = useUIStore((s) => s.weaponSize);
   const droneSize = useUIStore((s) => s.droneSize);
   const soundVolume = useUIStore((s) => s.soundVolume);
@@ -55,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
       });
       if (!res.ok) throw new Error('Failed to update location');
     } catch (err) {
-      console.error('Update location failed:', err);
+      logError('location.update.failed', { error: (err as Error).message });
     }
   };
 
@@ -65,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
       const res = await fetch(`${API_BASE}/api/platform/refill`, { method: 'PUT' });
       if (!res.ok) throw new Error('Failed to refill ammo');
     } catch (err) {
-      console.error('Refill ammo failed:', err);
+      logError('refill.ammo.failed', { error: (err as Error).message });
     }
   };
 
@@ -80,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
       }
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create targets');
-      console.error('Create targets failed:', err);
+      logError('create.targets.failed', { error: (err as Error).message });
     } finally {
       setCreateLoading(false);
     }
@@ -98,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
       }
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create drones');
-      console.error('Create drones failed:', err);
+      logError('create.drones.failed', { error: (err as Error).message });
     } finally {
       setCreateLoading(false);
     }
@@ -112,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
       useDroneStore.getState().clearDrones();
       useTargetStore.getState().setSelected(null);
     } catch (err) {
-      console.error('Clear drones failed:', err);
+      logError('clear.drones.failed', { error: (err as Error).message });
     }
   };
 
@@ -133,38 +135,23 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right zone: Create Targets, drawer toggles (mobile), hamburger menu */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        <button
-          onClick={handleCreateTargets}
-          disabled={createLoading}
-          className="px-3 py-1.5 bg-[#1E90FF] hover:bg-[#1a7de8] disabled:opacity-50 rounded text-xs font-mono font-medium text-white"
-          title="Create targettable drones (Engagement Ready, in range) for testing"
-        >
-          {createLoading ? 'Creating…' : 'CREATE TARGETS'}
-        </button>
+        <div className="relative inline-block">
+          {!hasEngageableTargets && !createLoading && (
+            <div className="create-targets-stroke" aria-hidden />
+          )}
+          <button
+            onClick={handleCreateTargets}
+            disabled={createLoading}
+            className="relative px-3 py-1.5 bg-[#1E90FF] hover:bg-[#1a7de8] disabled:opacity-50 rounded text-xs font-mono font-medium text-white"
+            title="Create targettable drones (Engagement Ready, in range) for testing"
+          >
+            {createLoading ? 'Creating…' : 'CREATE TARGETS'}
+          </button>
+        </div>
         {createError && (
           <span className="text-xs text-red-400 max-w-[120px] truncate" title={createError}>
             {createError}
           </span>
-        )}
-        {isMobile && onOpenLeftPanel && onOpenRightPanel && (
-          <>
-            <IconButton
-              onClick={onOpenLeftPanel}
-              sx={{ color: '#E8F4FD' }}
-              aria-label="Open target panel"
-              size="small"
-            >
-              <ListIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              onClick={onOpenRightPanel}
-              sx={{ color: '#E8F4FD' }}
-              aria-label="Open status panel"
-              size="small"
-            >
-              <MenuIcon fontSize="small" />
-            </IconButton>
-          </>
         )}
         <HamburgerButton
           open={menuOpen}

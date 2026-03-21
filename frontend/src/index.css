@@ -178,4 +178,25 @@ body {
   border-color: transparent !important;
 }
 
+/* Create Targets: rotating stroke until first targets exist */
+@keyframes create-targets-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.create-targets-stroke {
+  position: absolute;
+  inset: -2px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  border-top-color: #1E90FF;
+  animation: create-targets-rotate 1.2s linear infinite;
+  pointer-events: none;
+}
+
+/* --- Changelog ---
+ * 2025-03-20: Add create-targets-rotate animation for Create Targets button until first targets exist.
+ */
+
 /* Platform loading bar: 10 segments */

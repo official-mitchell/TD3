@@ -7,6 +7,7 @@ import { MapContainer } from './MapContainer';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
+import { useLoadingStore } from '../../store/loadingStore';
 import type { IDrone, IWeaponPlatform } from '@td3/shared-types';
 
 const mockMap = {
@@ -14,6 +15,8 @@ const mockMap = {
   getZoom: vi.fn(() => 14),
   getContainer: () => document.body,
   latLngToContainerPoint: vi.fn(() => ({ x: 200, y: 150 })),
+  on: vi.fn(),
+  off: vi.fn(),
 };
 
 vi.mock('react-leaflet', () => ({
@@ -45,6 +48,10 @@ vi.mock('react-leaflet', () => ({
   Polyline: ({ positions }: { positions: [number, number][] }) => (
     <div data-testid="polyline" data-positions={JSON.stringify(positions)} />
   ),
+  Polygon: ({ positions }: { positions: [number, number][] }) => (
+    <div data-testid="polygon" data-positions={JSON.stringify(positions)} />
+  ),
+  Tooltip: ({ children }: { children?: React.ReactNode }) => <div data-testid="tooltip">{children}</div>,
   useMap: () => mockMap,
   useMapEvents: () => mockMap,
 }));
@@ -61,6 +68,12 @@ vi.mock('leaflet/dist/leaflet.css', () => ({}));
 
 vi.mock('../../assets/TD3 IFV.png', () => ({ default: '/mock-ifv.png' }));
 vi.mock('../../assets/TD3 turret.png', () => ({ default: '/mock-turret.png' }));
+vi.mock('../../lib/sounds', () => ({
+  playSwivelSound: vi.fn(),
+  playFireSound: vi.fn(),
+  playRichochetSounds: vi.fn(),
+  playHitSound: vi.fn(),
+}));
 
 const PLATFORM: IWeaponPlatform = {
   position: { lat: 37.7749, lng: -122.4194 },
@@ -88,6 +101,19 @@ describe('MapContainer', () => {
     usePlatformStore.setState({ platform: null });
     useDroneStore.setState({ drones: new Map(), droneTrails: new Map() });
     useTargetStore.setState({ selectedDroneId: null });
+    useLoadingStore.setState({ soundsReady: true, platformReady: true, socketReady: true });
+  });
+
+  it('loading overlay visible when resources not ready', () => {
+    useLoadingStore.setState({ soundsReady: false, platformReady: false, socketReady: false });
+    render(<MapContainer />);
+    expect(screen.getByTestId('platform-loading-overlay')).toBeTruthy();
+  });
+
+  it('loading overlay hidden when all resources ready', () => {
+    useLoadingStore.setState({ soundsReady: true, platformReady: true, socketReady: true });
+    render(<MapContainer />);
+    expect(screen.queryByTestId('platform-loading-overlay')).toBeNull();
   });
 
   it('7.8.1: renders with CartoDB dark tiles', () => {
@@ -183,7 +209,7 @@ describe('MapContainer', () => {
     expect(overlay).toBeTruthy();
     expect(screen.getByText('THREAT')).toBeTruthy();
     expect(screen.getByText('SPEED')).toBeTruthy();
-    expect(screen.getByText('km/h')).toBeTruthy();
+    expect(screen.getAllByText('km/h').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/ALT \d+m/)).toBeTruthy();
     expect(screen.getByText('Engagement Probability')).toBeTruthy();
   });

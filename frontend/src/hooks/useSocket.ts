@@ -1,15 +1,12 @@
 /**
  * WebSocket hook — Socket.IO connection, event routing to stores, heartbeat lifecycle.
- * Per Implementation Plan 4.2, 4.3, 14.5.3. saveTelemetry writes drone updates to IndexedDB for offline.
- * drones:replace: full replace of drone list (after create/clear), clears selection if needed.
- * drone:destroyed: always append Destroyed to engagement log; addDyingDrone with last recorded position.
- * Position from: (1) drone in store, or (2) payload.position (backend sends last known from DB).
- * Use getState() in handlers to avoid stale closure (drones loaded after socket connects).
- * simulation:rate: updates connectionStore.simulationRate for droneUpdate events/sec monitoring.
+ * Per Implementation Plan 4.2, 4.3, 14.5.3, 18.3.2. saveTelemetry writes drone updates to IndexedDB for offline.
+ * Phase 18.3.2: log socket.connected, socket.disconnected, socket.reconnecting, engagement.result, pwa.offline, pwa.restored.
  */
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useDroneStore } from '../store/droneStore';
+import { log } from '../lib/logger';
 import { usePlatformStore } from '../store/platformStore';
 import { useTargetStore } from '../store/targetStore';
 import { useConnectionStore } from '../store/connectionStore';
@@ -33,6 +30,7 @@ const RECONNECT_MAX_DELAY_MS = 10000;
 
 export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
+  const prevStatusRef = useRef<string>('Offline');
 
   useEffect(() => {
     const socket = io(SOCKET_URL, {
@@ -73,14 +71,26 @@ export const useSocket = () => {
     };
 
     socket.on('connect', () => {
+      log('socket.connected');
+      if (prevStatusRef.current === 'Offline') {
+        log('pwa.restored');
+      }
+      prevStatusRef.current = 'Connected';
       setSocketRef(socket);
       connectionStore.setStatus('Connected');
       startHeartbeat();
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
+      log('socket.disconnected', { reason });
+      prevStatusRef.current = 'Offline';
       connectionStore.setStatus('Offline');
+      log('pwa.offline');
       clearHeartbeat();
+    });
+
+    socket.on('reconnect_attempt', (attempt: number) => {
+      log('socket.reconnecting', { attempt });
     });
 
     socket.on('connect_error', () => {
@@ -166,6 +176,7 @@ export const useSocket = () => {
     });
 
     socket.on('drone:hit', (payload: { droneId: string; timestamp?: string; hitPointsRemaining?: number; landingPosition?: { lat: number; lng: number } }) => {
+      log('engagement.result', { outcome: 'Hit', droneId: payload.droneId });
       playHitSound();
       playRichochetSounds();
       const drone = useDroneStore.getState().drones.get(payload.droneId);
@@ -191,6 +202,7 @@ export const useSocket = () => {
     });
 
     socket.on('drone:missed', (payload: { droneId: string; timestamp?: string; landingPosition?: { lat: number; lng: number } }) => {
+      log('engagement.result', { outcome: 'Missed', droneId: payload.droneId });
       const drone = useDroneStore.getState().drones.get(payload.droneId);
       const record: IEngagementRecord = {
         droneId: payload.droneId,

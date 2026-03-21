@@ -110,6 +110,35 @@ describe('StatusCards', () => {
     });
   });
 
+  describe('16.3.3: ConnectionBadge color for each ConnectionStatus', () => {
+    it('renders correct color for Connected', () => {
+      usePlatformStore.setState({ platform: PLATFORM });
+      useConnectionStore.setState({ status: 'Connected', lastHeartbeat: Date.now() });
+      render(<StatusCards />);
+      const dot = screen.getByTestId('connection-dot');
+      const bg = (dot as HTMLElement).style.backgroundColor;
+      expect(bg === 'rgb(0, 200, 83)' || bg === '#00C853').toBe(true);
+    });
+
+    it('renders correct color for Degraded', () => {
+      usePlatformStore.setState({ platform: PLATFORM });
+      useConnectionStore.setState({ status: 'Degraded' });
+      render(<StatusCards />);
+      const dot = screen.getByTestId('connection-dot');
+      const bg = (dot as HTMLElement).style.backgroundColor;
+      expect(bg === 'rgb(255, 179, 0)' || bg === '#FFB300').toBe(true);
+    });
+
+    it('renders correct color for Offline', () => {
+      usePlatformStore.setState({ platform: PLATFORM });
+      useConnectionStore.setState({ status: 'Offline', lastHeartbeat: null });
+      render(<StatusCards />);
+      const dot = screen.getByTestId('connection-dot');
+      const bg = (dot as HTMLElement).style.backgroundColor;
+      expect(bg === 'rgb(255, 23, 68)' || bg === '#FF1744').toBe(true);
+    });
+  });
+
   describe('8.6.3: KILLS and AMMO update after drone:hit', () => {
     it('displays updated killCount and ammoCount when platform is updated', () => {
       usePlatformStore.setState({ platform: PLATFORM });

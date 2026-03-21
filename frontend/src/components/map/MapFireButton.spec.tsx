@@ -7,6 +7,7 @@ import { MapFireButton } from './MapFireButton';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
+import { useTracerStore } from '../../store/tracerStore';
 import type { IWeaponPlatform, IDrone } from '@td3/shared-types';
 
 const mockEmit = vi.fn();
@@ -43,7 +44,7 @@ const createDrone = (overrides: Partial<IDrone> = {}): IDrone => ({
 describe('MapFireButton', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    usePlatformStore.setState({ platform: null });
+    usePlatformStore.setState({ platform: null, currentTurretHeading: 0 });
     useDroneStore.setState({ drones: new Map() });
     useTargetStore.setState({ selectedDroneId: null });
   });
@@ -56,6 +57,13 @@ describe('MapFireButton', () => {
     render(<MapFireButton />);
     expect(screen.getByTestId('map-fire-button')).toBeTruthy();
     expect(screen.getByText(/⌘↵|Ctrl\+↵/)).toBeTruthy();
+  });
+
+  it('has mobile bottom padding (pb-10) for viewport visibility', () => {
+    render(<MapFireButton />);
+    const container = screen.getByTestId('map-fire-button');
+    expect(container.className).toMatch(/pb-10/);
+    expect(container.className).toMatch(/sm:pb-2/);
   });
 
   it('FIRE disabled and labeled NO TARGET with no Engagement Ready drone', () => {
@@ -107,7 +115,7 @@ describe('MapFireButton', () => {
   });
 
   it('FIRE activates immediately when drone is Engagement Ready', () => {
-    usePlatformStore.setState({ platform: PLATFORM });
+    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
     useDroneStore.setState({
       drones: new Map([
         ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
@@ -121,7 +129,7 @@ describe('MapFireButton', () => {
   });
 
   it('ENGAGING resets when user changes target (not stuck)', () => {
-    usePlatformStore.setState({ platform: PLATFORM });
+    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
     useDroneStore.setState({
       drones: new Map([
         ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
@@ -145,7 +153,7 @@ describe('MapFireButton', () => {
 
   it('ENGAGING resets after 2 second burst if target not destroyed', () => {
     vi.useFakeTimers();
-    usePlatformStore.setState({ platform: PLATFORM });
+    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
     useDroneStore.setState({
       drones: new Map([
         ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
@@ -164,8 +172,69 @@ describe('MapFireButton', () => {
     expect(screen.getByText(/FIRE/)).toBeTruthy();
   });
 
+  it('16.3.4: FIRE enabled when target within engagement cone', () => {
+    const platformPos = PLATFORM.position;
+    usePlatformStore.setState({
+      platform: PLATFORM,
+      currentTurretHeading: 90,
+    });
+    // Drone at bearing ~90° (E) — within ±4° cone. Platform 37.77,-122.42; 0.01 lng E ≈ bearing 90
+    const droneInCone = createDrone({
+      droneId: 'D1',
+      status: 'Engagement Ready',
+      position: { lat: platformPos.lat, lng: platformPos.lng + 0.01, altitude: 100 },
+    });
+    useDroneStore.setState({ drones: new Map([['D1', droneInCone]]) });
+    useTargetStore.setState({ selectedDroneId: 'D1' });
+    render(<MapFireButton />);
+    const fireBtn = screen.getByRole('button', { name: /FIRE/ });
+    expect((fireBtn as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('16.3.4: FIRE disabled when target outside engagement cone', () => {
+    usePlatformStore.setState({
+      platform: PLATFORM,
+      currentTurretHeading: 90,
+    });
+    // Drone at bearing ~180° (S) — outside ±4° cone
+    const droneOutOfCone = createDrone({
+      droneId: 'D1',
+      status: 'Engagement Ready',
+      position: { lat: PLATFORM.position.lat - 0.01, lng: PLATFORM.position.lng, altitude: 100 },
+    });
+    useDroneStore.setState({ drones: new Map([['D1', droneOutOfCone]]) });
+    useTargetStore.setState({ selectedDroneId: 'D1' });
+    render(<MapFireButton />);
+    expect(screen.getByText('Align turret to target')).toBeTruthy();
+    const btn = screen.getByRole('button', { name: /NO TARGET/ });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('16.3.5: bullets/tracers fire immediately on click, engagement:fire emitted synchronously', () => {
+    usePlatformStore.setState({
+      platform: PLATFORM,
+      currentTurretHeading: 0,
+    });
+    const drone = createDrone({
+      droneId: 'D1',
+      status: 'Engagement Ready',
+      position: { lat: PLATFORM.position.lat + 0.01, lng: PLATFORM.position.lng, altitude: 100 },
+    });
+    useDroneStore.setState({ drones: new Map([['D1', drone]]) });
+    useTargetStore.setState({ selectedDroneId: 'D1' });
+    const addTracerSpy = vi.spyOn(useTracerStore.getState(), 'addTracer');
+    render(<MapFireButton />);
+    const fireBtn = screen.getByRole('button', { name: /FIRE/ });
+    fireEvent.click(fireBtn);
+
+    expect(mockEmit).toHaveBeenCalledWith('engagement:fire', expect.objectContaining({ droneId: 'D1' }));
+    expect(addTracerSpy).toHaveBeenCalled();
+    expect(screen.getByText('Firing')).toBeTruthy();
+    addTracerSpy.mockRestore();
+  });
+
   it('pressing FIRE emits engagement:fire and shows Firing until drone:destroyed', () => {
-    usePlatformStore.setState({ platform: PLATFORM });
+    usePlatformStore.setState({ platform: PLATFORM, currentTurretHeading: 0 });
     useDroneStore.setState({
       drones: new Map([
         ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.4194, altitude: 100 } })],
