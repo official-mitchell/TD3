@@ -1,8 +1,9 @@
 /**
  * Error boundary for D3/Leaflet render zones. Phase 18.2.1.
  * Catches rendering errors and shows fallback UI instead of unmounting the app.
+ * Fix: removed unused React import; added override to componentDidCatch, render, getDerivedStateFromError.
  */
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { error as logError } from '../lib/logger';
 
 interface Props {
@@ -20,7 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false, errorMessage: '' };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static override getDerivedStateFromError(error: Error): State {
     return { hasError: true, errorMessage: error.message };
   }
 
@@ -28,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
     logError('error.boundary', { error: error.message, componentStack: errorInfo.componentStack });
   }
 
-  render(): ReactNode {
+  override render(): ReactNode {
     if (this.state.hasError) {
       return (
         <div className="flex items-center justify-center w-full h-full min-h-[120px] bg-[#0A0E1A] border border-[#1A3A5C] rounded">
