@@ -2,6 +2,7 @@
  * Architecture diagram for Systems View. Per Implementation Plan Presentation 7.1–7.6, 10.2.
  * Four zones, node chips, paths, pulse animations. 10.2: degraded overlay — Zone 1→2 3× slower,
  * stationary amber dots at Normalization Service, amber path stroke, node fill.
+ * Fix: removed unused isDegraded variable.
  */
 import React, { useState, useMemo } from 'react';
 import { useConnectionStore } from '../../store/connectionStore';
@@ -67,7 +68,6 @@ export const ArchitectureDiagram: React.FC = () => {
   const eventRates = useDebugStore((s) => s.eventRates);
 
   const [hoveredNode, setHoveredNode] = useState<SystemNodeId | null>(null);
-  const isDegraded = connectionStatus !== 'Connected';
   const isOffline = connectionStatus === 'Offline';
 
   const pathDefs = useMemo(() => PATHS.map((p) => ({ ...p, d: makePathD(p.from, p.to) })), []);
