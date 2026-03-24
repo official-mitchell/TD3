@@ -68,7 +68,7 @@ describe('BottomBar', () => {
     useDroneStore.setState({
       drones: new Map([
         ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.775, lng: -122.42, altitude: 100 } })],
-        ['D2', createDrone({ droneId: 'D2', status: 'Engagement Ready', position: { lat: 37.9, lng: -122.5, altitude: 100 } })],
+        ['D2', createDrone({ droneId: 'D2', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.45, altitude: 100 } })],
       ]),
     });
     useTargetStore.setState({ selectedDroneId: 'D1' });
@@ -87,7 +87,7 @@ describe('BottomBar', () => {
       useDroneStore.setState({
         drones: new Map([
           ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.775, lng: -122.42, altitude: 100 } })],
-          ['D2', createDrone({ droneId: 'D2', status: 'Engagement Ready', position: { lat: 37.9, lng: -122.5, altitude: 100 } })],
+          ['D2', createDrone({ droneId: 'D2', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.45, altitude: 100 } })],
         ]),
       });
       useTargetStore.setState({ selectedDroneId: 'D1' });
@@ -109,7 +109,7 @@ describe('BottomBar', () => {
       useDroneStore.setState({
         drones: new Map([
           ['D1', createDrone({ droneId: 'D1', status: 'Engagement Ready', position: { lat: 37.775, lng: -122.42, altitude: 100 } })],
-          ['D2', createDrone({ droneId: 'D2', status: 'Engagement Ready', position: { lat: 37.9, lng: -122.5, altitude: 100 } })],
+          ['D2', createDrone({ droneId: 'D2', status: 'Engagement Ready', position: { lat: 37.78, lng: -122.45, altitude: 100 } })],
         ]),
       });
       useTargetStore.setState({ selectedDroneId: 'D2' });

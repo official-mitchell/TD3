@@ -136,6 +136,37 @@ describe('MapContainer', () => {
     expect(screen.getByTestId('platform-loading-overlay')).toBeTruthy();
   });
 
+  it('loading overlay shows approximate % during load', () => {
+    useLoadingStore.setState({ soundsReady: false, platformReady: false, socketReady: false, loadStartMs: 0 });
+    render(<MapContainer />);
+    expect(screen.getByTestId('loading-percent')).toBeTruthy();
+    expect(screen.getByTestId('loading-percent').textContent).toMatch(/Loading \d+%/);
+  });
+
+  it('loading overlay shows singular loading log for first pending resource', () => {
+    useLoadingStore.setState({ soundsReady: false, platformReady: false, socketReady: false });
+    render(<MapContainer />);
+    expect(screen.getByTestId('loading-log').textContent).toBe('Loading database…');
+  });
+
+  it('loading log shows Socket.IO Gateway when platform ready but socket not', () => {
+    useLoadingStore.setState({ soundsReady: false, platformReady: true, socketReady: false });
+    render(<MapContainer />);
+    expect(screen.getByTestId('loading-log').textContent).toBe('Connecting Socket.IO Gateway…');
+  });
+
+  it('loading log shows audio when platform and socket ready', () => {
+    useLoadingStore.setState({ soundsReady: false, platformReady: true, socketReady: true });
+    render(<MapContainer />);
+    expect(screen.getByTestId('loading-log').textContent).toBe('Loading audio…');
+  });
+
+  it('loading log hidden when all ready', () => {
+    useLoadingStore.setState({ soundsReady: true, platformReady: true, socketReady: true });
+    render(<MapContainer />);
+    expect(screen.queryByTestId('loading-log')).toBeNull();
+  });
+
   it('loading overlay hidden when all resources ready', () => {
     useLoadingStore.setState({ soundsReady: true, platformReady: true, socketReady: true });
     render(<MapContainer />);

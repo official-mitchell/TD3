@@ -98,7 +98,7 @@ describe('TargetPanel', () => {
       usePlatformStore.setState({ platform: PLATFORM });
       useDroneStore.setState({
         drones: new Map([
-          ['LOW', createDrone({ droneId: 'LOW', status: 'Engagement Ready', threatLevel: 0.2, position: { lat: 37.9, lng: -122.5, altitude: 100 } })],
+          ['LOW', createDrone({ droneId: 'LOW', status: 'Engagement Ready', threatLevel: 0.2, position: { lat: 37.78, lng: -122.45, altitude: 100 } })],
           ['HIGH', createDrone({ droneId: 'HIGH', status: 'Engagement Ready', threatLevel: 0.9, position: { lat: 37.775, lng: -122.42, altitude: 100 } })],
         ]),
       });

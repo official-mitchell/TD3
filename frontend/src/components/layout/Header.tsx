@@ -1,6 +1,6 @@
 /**
  * Header bar. Left: TD3 logo + title. Right: Mode switcher (OPERATOR·SYSTEMS·DEBUG), Create Targets, hamburger menu.
- * Create Targets: only targettable drones (Engagement Ready, in range). Animated rotating stroke until first targets exist.
+ * Create Targets: only targettable drones (Engagement Ready, in range). Animated gradient + breathing scale until first press.
  * Settings: Create drones, Clear drones, etc. Mobile drawer toggles moved to DashboardView floating carets.
  * Per Implementation Plan Presentation 3.1: ToggleButtonGroup for mode; td3:capture-map-state for systems-view.
  * Per 4.1: SystemStatusBar below nav row, always visible.
@@ -199,19 +199,18 @@ export const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
 
       {/* Right zone: Create Targets, drawer toggles (mobile), hamburger menu */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        <div className="relative inline-block">
-          {!hasEngageableTargets && !createLoading && (
-            <div className="create-targets-stroke" aria-hidden />
-          )}
-          <button
-            onClick={handleCreateTargets}
-            disabled={createLoading}
-            className="relative px-3 py-1.5 bg-[#1E90FF] hover:bg-[#1a7de8] disabled:opacity-50 rounded text-xs font-mono font-medium text-white"
-            title="Create targettable drones (Engagement Ready, in range) for testing"
-          >
-            {createLoading ? 'Creating…' : 'CREATE TARGETS'}
-          </button>
-        </div>
+        <button
+          onClick={handleCreateTargets}
+          disabled={createLoading}
+          className={`relative px-3 py-1.5 rounded text-xs font-mono font-medium text-white disabled:opacity-50 ${
+            !hasEngageableTargets && !createLoading
+              ? 'create-targets-idle'
+              : 'bg-[#1E90FF] hover:bg-[#1a7de8]'
+          }`}
+          title="Create targettable drones (Engagement Ready, in range) for testing"
+        >
+          {createLoading ? 'Creating…' : 'CREATE TARGETS'}
+        </button>
         {createError && (
           <span className="text-xs text-red-400 max-w-[120px] truncate" title={createError}>
             {createError}

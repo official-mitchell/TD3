@@ -1,6 +1,6 @@
 /**
  * Tracer rounds store. Holds recent hit/miss entries for TracerOverlay.
- * Populated by: (1) MapFireButton optimistically on fire + burst interval; (2) useSocket on drone:hit and drone:missed.
+ * Populated by useSocket on drone:hit and drone:missed (confirmed results only).
  * Entries auto-expire after TRACER_FADE_MS (2.5s).
  */
 import { create } from 'zustand';

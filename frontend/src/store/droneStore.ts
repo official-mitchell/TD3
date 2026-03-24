@@ -111,9 +111,11 @@ export const useDroneStore = create<DroneState>()(
 
       getEngageableTargets: (platformLat, platformLng) => {
         const { drones } = get();
+        const pos = platformPos(platformLat, platformLng);
         return Array.from(drones.values())
           .filter((d) => {
             if (d.status !== 'Engagement Ready') return false;
+            if (calculateDistance(pos, d.position) > PLATFORM_CONSTANTS.MAX_TARGETING_RANGE_M) return false;
             if (d.position.altitude > PLATFORM_CONSTANTS.MAX_ENGAGEMENT_ALTITUDE_M) return false;
             const friendly = 'isFriendly' in d && (d as IDrone & { isFriendly?: boolean }).isFriendly;
             if (friendly) return false;

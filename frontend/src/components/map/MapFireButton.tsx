@@ -9,25 +9,22 @@
  * Resets ENGAGING when target drone status is no longer Engagement Ready or Hit (e.g. reverted to Confirmed).
  * Resets on drone:missed immediately (backend fires ~300ms/round; miss = reset right away).
  * Throttled display updates (150ms) to reduce jitter. Button and description centered with flex.
- * Optimistic tracers: add tracer immediately on fire and every 300ms during burst for instant feedback.
+ * Tracers/sounds only on confirmed results (drone:hit/drone:missed from useSocket). No optimistic spray.
  */
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
-import { useTracerStore } from '../../store/tracerStore';
 import { useDebugStore } from '../../store/debugStore';
 import { useHighlight } from '../../hooks/useHighlight';
 import { getSocket } from '../../lib/socketRef';
 import { log } from '../../lib/logger';
-import { playFireSound, playSwivelSound } from '../../lib/sounds';
-import { calculateBearing } from '../../utils/calculations';
+import { playSwivelSound } from '../../lib/sounds';
+import { calculateBearing, calculateDistance } from '../../utils/calculations';
 import { PLATFORM_CONSTANTS } from '../../utils/constants';
 
 /** Engagement cone half-angle (deg). Target must be within ±CONE_HALF_ANGLE of turret heading. */
 const CONE_HALF_ANGLE_DEG = 4;
-
-const FALLBACK_PLATFORM_POS = { lat: 25.905310475056915, lng: 51.543824178558054 };
 
 /** Mac: ⌘↵, PC: Ctrl+↵ */
 const getFireShortcutLabel = (): string =>
@@ -60,29 +57,20 @@ export const MapFireButton: React.FC = () => {
     return diff <= CONE_HALF_ANGLE_DEG;
   }, [selectedDrone, platform?.position, currentTurretHeading]);
 
+  const targetWithinRange = useMemo(() => {
+    if (!selectedDrone || !platform?.position) return false;
+    return calculateDistance(platform.position, selectedDrone.position) <= PLATFORM_CONSTANTS.MAX_TARGETING_RANGE_M;
+  }, [selectedDrone, platform?.position]);
+
   const canFire =
     selectedDrone?.status === 'Engagement Ready' &&
     targetInCone &&
+    targetWithinRange &&
     !firing &&
     (platform?.isActive ?? false) === true;
 
   const firingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const firingSoundIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const firingDroneIdRef = React.useRef<string | null>(null);
-
-  const addOptimisticTracer = useCallback((droneId: string) => {
-    const plat = usePlatformStore.getState().platform;
-    const drone = useDroneStore.getState().drones.get(droneId);
-    const start = plat?.position ?? FALLBACK_PLATFORM_POS;
-    const end = drone?.position ?? start;
-    useTracerStore.getState().addTracer({
-      startLat: start.lat,
-      startLng: start.lng,
-      endLat: end.lat,
-      endLng: end.lng,
-      outcome: 'Hit',
-    });
-  }, []);
 
   const handleFire = useCallback(() => {
     if (!canFire || !selectedDroneId) return;
@@ -93,44 +81,27 @@ export const MapFireButton: React.FC = () => {
     setFiring(true);
     setRecoiling(true);
     usePlatformStore.getState().setTurretRecoiling(true);
-    playFireSound();
-    addOptimisticTracer(selectedDroneId);
     log('engagement.fire.emitted', { droneId: selectedDroneId });
     useDebugStore.getState().setPendingFire(true);
     socket.emit('engagement:fire', { droneId: selectedDroneId, timestamp: new Date().toISOString() });
     setTimeout(() => {
       setRecoiling(false);
       usePlatformStore.getState().setTurretRecoiling(false);
-    }, 200);
-    const ROUND_INTERVAL_MS = 300;
-    if (firingSoundIntervalRef.current) clearInterval(firingSoundIntervalRef.current);
-    firingSoundIntervalRef.current = setInterval(() => {
-      if (firingDroneIdRef.current === selectedDroneId) {
-        playFireSound();
-        addOptimisticTracer(selectedDroneId);
-      }
-    }, ROUND_INTERVAL_MS);
+    }, 100);
+    // Safety: reset firing state if no result within 5s (network/backend issue)
     firingTimeoutRef.current = setTimeout(() => {
-      if (firingSoundIntervalRef.current) {
-        clearInterval(firingSoundIntervalRef.current);
-        firingSoundIntervalRef.current = null;
-      }
       if (firingDroneIdRef.current === selectedDroneId) {
         firingDroneIdRef.current = null;
         setFiring(false);
       }
-    }, 2000);
-  }, [canFire, selectedDroneId, addOptimisticTracer]);
+    }, 5000);
+  }, [canFire, selectedDroneId]);
 
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
     const stopFiring = () => {
       if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
-      if (firingSoundIntervalRef.current) {
-        clearInterval(firingSoundIntervalRef.current);
-        firingSoundIntervalRef.current = null;
-      }
       firingDroneIdRef.current = null;
       setFiring(false);
     };
@@ -146,7 +117,6 @@ export const MapFireButton: React.FC = () => {
       socket.off('drone:destroyed', onDestroyed);
       socket.off('drone:missed', onMissed);
       if (firingTimeoutRef.current) clearTimeout(firingTimeoutRef.current);
-      if (firingSoundIntervalRef.current) clearInterval(firingSoundIntervalRef.current);
     };
   }, []);
 
@@ -225,25 +195,27 @@ export const MapFireButton: React.FC = () => {
     !canFire && !firing && selectedDroneId
       ? !(platform?.isActive ?? false)
           ? 'Platform offline'
-          : selectedDrone && selectedDrone.status !== 'Engagement Ready'
-            ? (() => {
-                const altTooHigh =
-                  selectedDrone.position.altitude > PLATFORM_CONSTANTS.MAX_ENGAGEMENT_ALTITUDE_M;
-                const isFriendly =
-                  'isFriendly' in selectedDrone && (selectedDrone as { isFriendly?: boolean }).isFriendly;
-                const reasons: string[] = [];
-                if (altTooHigh) reasons.push('Altitude too high');
-                if (isFriendly) reasons.push('Friendly drone');
-                return reasons.length > 0 ? reasons.join(' · ') : 'Target must be Engagement Ready';
-              })()
-            : selectedDrone && selectedDrone.status === 'Engagement Ready' && !targetInCone
-              ? 'Align turret to target'
-              : null
+          : selectedDrone && selectedDrone.status === 'Engagement Ready' && !targetWithinRange
+            ? 'Target beyond 4000m'
+            : selectedDrone && selectedDrone.status !== 'Engagement Ready'
+              ? (() => {
+                  const altTooHigh =
+                    selectedDrone.position.altitude > PLATFORM_CONSTANTS.MAX_ENGAGEMENT_ALTITUDE_M;
+                  const isFriendly =
+                    'isFriendly' in selectedDrone && (selectedDrone as { isFriendly?: boolean }).isFriendly;
+                  const reasons: string[] = [];
+                  if (altTooHigh) reasons.push('Altitude too high');
+                  if (isFriendly) reasons.push('Friendly drone');
+                  return reasons.length > 0 ? reasons.join(' · ') : 'Target must be Engagement Ready';
+                })()
+              : selectedDrone && selectedDrone.status === 'Engagement Ready' && !targetInCone
+                ? 'Align turret to target'
+                : null
       : null;
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 z-[600] pointer-events-none flex flex-col items-center justify-end pb-10 sm:pb-2"
+      className="absolute bottom-0 left-0 right-0 z-[600] pointer-events-none flex flex-col items-center justify-end pb-16 sm:pb-2"
       data-testid="map-fire-button"
     >
       <button
@@ -273,7 +245,8 @@ export const MapFireButton: React.FC = () => {
 };
 
 /* --- Changelog ---
- * 2025-03-19: Add optimistic tracers on fire and every 300ms during burst for instant feedback (fixes tracer lag).
+ * 2025-03-23: Remove optimistic tracers/sounds; fire sequence only on confirmed drone:hit/drone:missed. No burst interval.
  * 2025-03-20: Mobile: increase bottom padding (pb-10) so fire button stays in viewport.
+ * 2025-03-23: Mobile: pb-16 for more bottom margin.
  * 2025-03-20: Remove "Select a target from the list" from noFireReason; SelectTargetHint shows instead.
  */

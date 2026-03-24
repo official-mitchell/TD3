@@ -220,6 +220,7 @@ export const useSocket = () => {
     });
 
     socket.on('drone:missed', (payload: { droneId: string; timestamp?: string; landingPosition?: { lat: number; lng: number } }) => {
+      debugStore.setPendingFire(false);
       log('engagement.result', { outcome: 'Missed', droneId: payload.droneId });
       const drone = useDroneStore.getState().drones.get(payload.droneId);
       const record: IEngagementRecord = {

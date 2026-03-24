@@ -1,17 +1,17 @@
 /**
  * Dashboard view. Per Implementation Plan 6.1–6.3, 14.6.2, 18.2.2.
  * ErrorBoundary wraps MapContainer, TargetPanel, BottomBar per Phase 18.2.
- * Responsive: at 768px sidebars become MUI Drawers; floating carets on map edges open panels.
+ * Responsive: at 768px sidebars become MUI Drawers; text buttons overlaid on map open panels (not hamburgers).
  * Sidebar widths: left 308px (+10%), right 352px (+10%); middle flex-1. overflow-x-hidden on sidebars.
  * OfflineBanner shown when connectionStore.status is Offline.
  * 6.2.2: On mount, restores preSystemsState.selectedDroneId via targetStore.setSelected.
+ *
+ * --- Changelog ---
+ * 2025-03-23: Mobile: side navs as text buttons ("Priority targets", "Engagement Log") at bottom overlay, not hamburgers.
  */
 import React, { useState, useEffect } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Drawer from '@mui/material/Drawer';
-import IconButton from '@mui/material/IconButton';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import AssignmentIcon from '@mui/icons-material/Assignment';
 import { Header } from '@components/layout/Header';
 import { BottomBar } from '@components/layout/BottomBar';
 import { OfflineBanner } from '@components/layout/OfflineBanner';
@@ -68,26 +68,24 @@ export const DashboardView: React.FC = () => {
           <ErrorBoundary>
             <MapContainer />
           </ErrorBoundary>
-          {/* Mobile: floating carets to open panels */}
+          {/* Mobile: text buttons overlaid at bottom (swaps with indicators), not hamburgers */}
           {isMobile && (
-            <>
-              <IconButton
+            <div className="absolute bottom-0 left-0 right-0 z-[650] flex items-end justify-between px-2 pb-2 pointer-events-none [&>button]:pointer-events-auto">
+              <button
                 onClick={() => setLeftOpen(true)}
                 aria-label="Open priority targets"
-                className="!absolute left-0 top-1/2 !-translate-y-1/2 z-[700] !bg-[#0F1929]/90 !border !border-r-0 !border-[#1A3A5C] !rounded-r-md hover:!bg-[#1A3A5C] !text-[#E8F4FD] !py-2 !px-1"
-                sx={{ minWidth: 36 }}
+                className="px-3 py-2 text-xs font-medium rounded-md bg-[#0F1929]/95 border border-[#1A3A5C] text-[#E8F4FD] hover:bg-[#1A3A5C]"
               >
-                <FormatListBulletedIcon fontSize="small" />
-              </IconButton>
-              <IconButton
+                Priority targets
+              </button>
+              <button
                 onClick={() => setRightOpen(true)}
                 aria-label="Open engagement log"
-                className="!absolute right-0 top-1/2 !-translate-y-1/2 z-[700] !bg-[#0F1929]/90 !border !border-l-0 !border-[#1A3A5C] !rounded-l-md hover:!bg-[#1A3A5C] !text-[#E8F4FD] !py-2 !px-1"
-                sx={{ minWidth: 36 }}
+                className="px-3 py-2 text-xs font-medium rounded-md bg-[#0F1929]/95 border border-[#1A3A5C] text-[#E8F4FD] hover:bg-[#1A3A5C]"
               >
-                <AssignmentIcon fontSize="small" />
-              </IconButton>
-            </>
+                Engagement Log
+              </button>
+            </div>
           )}
         </main>
         {!isMobile && rightSidebar}

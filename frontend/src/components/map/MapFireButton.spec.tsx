@@ -7,7 +7,6 @@ import { MapFireButton } from './MapFireButton';
 import { useDroneStore } from '../../store/droneStore';
 import { usePlatformStore } from '../../store/platformStore';
 import { useTargetStore } from '../../store/targetStore';
-import { useTracerStore } from '../../store/tracerStore';
 import type { IWeaponPlatform, IDrone } from '@td3/shared-types';
 
 const mockEmit = vi.fn();
@@ -59,10 +58,10 @@ describe('MapFireButton', () => {
     expect(screen.getByText(/⌘↵|Ctrl\+↵/)).toBeTruthy();
   });
 
-  it('has mobile bottom padding (pb-10) for viewport visibility', () => {
+  it('has mobile bottom padding (pb-16) for viewport visibility', () => {
     render(<MapFireButton />);
     const container = screen.getByTestId('map-fire-button');
-    expect(container.className).toMatch(/pb-10/);
+    expect(container.className).toMatch(/pb-16/);
     expect(container.className).toMatch(/sm:pb-2/);
   });
 
@@ -166,7 +165,7 @@ describe('MapFireButton', () => {
 
     expect(screen.getByText('Firing')).toBeTruthy();
 
-    act(() => { vi.advanceTimersByTime(2000); });
+    act(() => { vi.advanceTimersByTime(5000); }); /* Safety timeout resets firing if no result */
 
     expect(screen.queryByText('Firing')).toBeNull();
     expect(screen.getByText(/FIRE/)).toBeTruthy();
@@ -222,15 +221,12 @@ describe('MapFireButton', () => {
     });
     useDroneStore.setState({ drones: new Map([['D1', drone]]) });
     useTargetStore.setState({ selectedDroneId: 'D1' });
-    const addTracerSpy = vi.spyOn(useTracerStore.getState(), 'addTracer');
     render(<MapFireButton />);
     const fireBtn = screen.getByRole('button', { name: /FIRE/ });
     fireEvent.click(fireBtn);
 
     expect(mockEmit).toHaveBeenCalledWith('engagement:fire', expect.objectContaining({ droneId: 'D1' }));
-    expect(addTracerSpy).toHaveBeenCalled();
     expect(screen.getByText('Firing')).toBeTruthy();
-    addTracerSpy.mockRestore();
   });
 
   it('pressing FIRE emits engagement:fire and shows Firing until drone:destroyed', () => {

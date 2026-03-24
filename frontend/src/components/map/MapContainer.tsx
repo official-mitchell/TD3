@@ -9,6 +9,12 @@
  * DyingDroneOverlay: shown when showDyingDrones (uiStore, default true).
  * SelectTargetHint: single message when no target selected (create targets or select from map/list).
  * Loading overlay now waits for sounds + platform + socket (loadingStore). QA metrics reported to backend.
+ * Loading overlay: 8s session, approximate % progress during load, anticipates longer loads.
+ *
+ * --- Changelog ---
+ * 2025-03-23: Longer load session (8s), time-based progress, approximate % display during load.
+ * 2025-03-23: Looping shimmer bar that fills to progress %, total % over top.
+ * 2025-03-23: Larger load bar; singular loading log beneath (architecture layer names).
  */
 import React, { useState, useEffect } from 'react';
 import { MapContainer as LeafletMap, TileLayer, ZoomControl, useMapEvents, useMap } from 'react-leaflet';
@@ -57,10 +63,31 @@ const FALLBACK_PLATFORM = {
   killCount: 0,
 };
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-const LOADING_SEGMENTS = 10;
+
+/** Expected max load duration; bar reaches ~95% over this session to anticipate longer loads */
+const EXPECTED_LOAD_SESSION_MS = 8000;
+const PROGRESS_CAP_PERCENT = 95;
+const TICK_MS = 80;
+
+function computeProgressPercent(
+  loadStartMs: number | null,
+  allReady: boolean,
+  now: number
+): number {
+  if (allReady) return 100;
+  const start = loadStartMs ?? now;
+  const elapsed = Math.max(0, now - start);
+  const raw = (elapsed / EXPECTED_LOAD_SESSION_MS) * 100;
+  return Math.min(PROGRESS_CAP_PERCENT, Math.round(raw));
+}
 
 const PlatformLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => {
-  const [filled, setFilled] = useState(0);
+  const loadStartMs = useLoadingStore((s) => s.loadStartMs);
+  const allReady = useLoadingStore((s) => s.allReady());
+  const soundsReady = useLoadingStore((s) => s.soundsReady);
+  const platformReady = useLoadingStore((s) => s.platformReady);
+  const socketReady = useLoadingStore((s) => s.socketReady);
+  const [progressPercent, setProgressPercent] = useState(0);
   const [fadeOut, setFadeOut] = useState(false);
   const [hide, setHide] = useState(false);
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
@@ -70,30 +97,30 @@ const PlatformLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => 
       setHasBeenVisible(true);
       setHide(false);
       setFadeOut(false);
-      setFilled(0);
+      setProgressPercent(0);
+
       const interval = setInterval(() => {
-        setFilled((f) => {
-          if (f >= LOADING_SEGMENTS - 1) {
-            clearInterval(interval);
-            return LOADING_SEGMENTS;
-          }
-          return f + 1;
-        });
-      }, 120);
+        const now = performance.now();
+        const pct = computeProgressPercent(loadStartMs, allReady, now);
+        setProgressPercent(pct);
+      }, TICK_MS);
       return () => clearInterval(interval);
     } else if (hasBeenVisible) {
-      // Priority targets loaded — complete fill and fade out
-      setFilled(LOADING_SEGMENTS);
+      setProgressPercent(100);
       setFadeOut(true);
       const t = setTimeout(() => setHide(true), 250);
       return () => clearTimeout(t);
     }
     return undefined;
-  }, [visible, hasBeenVisible]);
+  }, [visible, hasBeenVisible, loadStartMs, allReady]);
 
   if (!hasBeenVisible && !visible) return null;
   if (hide) return null;
   if (!visible && !fadeOut) return null;
+
+  // Per-resource loading log, mapped to architecture layers (Systems View). First pending item shown.
+  const pendingLog =
+    !platformReady ? 'Loading database…' : !socketReady ? 'Connecting Socket.IO Gateway…' : !soundsReady ? 'Loading audio…' : null;
 
   return (
     <div
@@ -102,17 +129,30 @@ const PlatformLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => 
       aria-hidden
     >
       <div
-        className={`flex gap-0.5 px-4 py-3 rounded-lg bg-[#0F1929]/90 border border-[#1A3A5C] transition-opacity duration-200 ${
+        className={`relative flex flex-col items-center gap-4 px-6 py-5 rounded-lg bg-[#0F1929]/90 border border-[#1A3A5C] transition-opacity duration-200 min-w-[280px] ${
           fadeOut ? 'opacity-0' : 'opacity-100'
         }`}
       >
-        {Array.from({ length: LOADING_SEGMENTS }, (_, i) => (
+        {/* Total load percentage over top */}
+        <div
+          className="text-center text-lg font-semibold text-slate-200 tabular-nums z-10"
+          data-testid="loading-percent"
+        >
+          Loading {progressPercent}%
+        </div>
+        {/* Bar that fills up to progress % with looping shimmer — larger */}
+        <div className="relative w-full h-5 rounded-full bg-[#1A3A5C] overflow-hidden min-w-[240px]">
           <div
-            key={i}
-            className="w-3 h-5 rounded-sm transition-colors duration-100"
-            style={{ backgroundColor: i < filled ? '#1E90FF' : '#1A3A5C' }}
+            className="absolute inset-y-0 left-0 rounded-full bg-[#1E90FF] transition-[width] duration-150 ease-out loading-bar-shimmer"
+            style={{ width: `${progressPercent}%` }}
           />
-        ))}
+        </div>
+        {/* Singular loading log item — architecture layer we're awaiting */}
+        {pendingLog && (
+          <div className="text-center text-xs text-slate-400 font-medium" data-testid="loading-log">
+            {pendingLog}
+          </div>
+        )}
       </div>
     </div>
   );

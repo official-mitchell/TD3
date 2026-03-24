@@ -90,10 +90,12 @@ describe('DashboardView', () => {
       mockUseMediaQuery.mockReturnValue(true);
     });
 
-    it('shows floating carets for priority targets and engagement log', () => {
+    it('shows overlay text buttons for priority targets and engagement log (not hamburgers)', () => {
       render(<DashboardView />);
       expect(screen.getByLabelText('Open priority targets')).toBeTruthy();
       expect(screen.getByLabelText('Open engagement log')).toBeTruthy();
+      expect(screen.getByText('Priority targets')).toBeTruthy();
+      expect(screen.getByText('Engagement Log')).toBeTruthy();
     });
 
     it('left caret opens target panel drawer', () => {
@@ -105,7 +107,7 @@ describe('DashboardView', () => {
     it('right caret opens engagement log drawer', () => {
       render(<DashboardView />);
       fireEvent.click(screen.getByLabelText('Open engagement log'));
-      expect(screen.getByText('Engagement Log')).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Engagement Log' })).toBeTruthy();
     });
 
     it('renders map without persistent sidebars (drawers overlay on demand)', () => {

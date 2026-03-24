@@ -11,7 +11,12 @@
  * 60fps: updateInterval 16ms. Throttle drone.save() to 500ms or on status change.
  * Time-based: speed escalation (+5 km/h/s), status (msWithin5km>=6000), evading (10s), heading nudge scaled.
  * simulation:rate emitted every second for droneUpdate events/sec monitoring.
- * Stable drone movement: all drones move via destinationPoint (heading + speed). Approach: nudge 8 deg/s. Cruise: arc turn ~30s.
+ * Stable drone movement: all drones move via destinationPoint (heading + speed). 80% approach turret (4 deg/s nudge).
+ * Cruise 20%: orbit around platform (tangent heading). Reduced heading variance for smooth 60fps. FixedWing faster.
+ *
+ * --- Changelog ---
+ * 2025-03-23: 80% approach turret (was 70%). 4 deg/s nudge (was 8). Cruise orbit (tangent ±90°). Evasion ±8° (was ±15°).
+ * 2025-03-23: FixedWing speed 165–195 km/h (was 105–125). createTestDrones FixedWing 165–170, createTargettableDrones 175.
  */
 import { Server as SocketServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
@@ -247,7 +252,7 @@ export class SocketService {
         /* 13.5: Evasive maneuver on miss (time-based). Reduced jink for smoother evasion. */
         const evadingMs = this.evadingMsRemaining.get(droneId);
         if (evadingMs !== undefined && evadingMs > 0) {
-          const jink = (Math.random() - 0.5) * 30; /* ±15° per tick for consistent evasion */
+          const jink = (Math.random() - 0.5) * 16; /* ±8° per tick for consistent evasion */
           drone.heading = ((drone.heading ?? 0) + jink + 360) % 360;
           const dtSec = this.simulationConfig.updateInterval / 1000;
           drone.speed = Math.min(250, (drone.speed ?? 100) + 30 * dtSec); /* 13.5.2: +30 km/h per second */
@@ -286,7 +291,7 @@ export class SocketService {
           if (base == null) {
             const ranges: Record<DroneType, [number, number]> = {
               Quadcopter: [90, 110],
-              FixedWing: [105, 125],
+              FixedWing: [165, 195],
               VTOL: [95, 120],
               Unknown: [95, 115],
             };
@@ -300,10 +305,9 @@ export class SocketService {
         /* All drones move in heading direction (no random lat/lng). Straight lines, arc turns. */
         let useApproachVector = this.droneUseApproach.get(droneId);
         if (useApproachVector === undefined) {
-          useApproachVector = Math.random() < 0.7; /* 70% fly toward turret (13.1), assigned once */
+          useApproachVector = Math.random() < 0.8; /* 80% fly toward turret, 20% orbit around */
           this.droneUseApproach.set(droneId, useApproachVector);
         }
-        const now = Date.now();
 
         if (useApproachVector) {
           /* 13.6: Swarm formation — 3+ drones: space approach bearings 120° apart */
@@ -329,29 +333,28 @@ export class SocketService {
           const currentHeading = (drone.heading ?? 0) % 360;
           let angleDiff = (targetBearing - currentHeading + 360) % 360;
           if (angleDiff > 180) angleDiff -= 360;
-          const nudgeDeg = 8 * dtSec; /* 8 deg/s smooth turn */
+          const nudgeDeg = 4 * dtSec; /* 4 deg/s smooth turn for consistent forward motion */
           const nudge = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), nudgeDeg);
           drone.heading = (currentHeading + nudge + 360) % 360;
         } else {
-          /* Cruise: fly straight, arc turn every ~30s */
-          let nextTurn = this.droneNextTurnAt.get(droneId) ?? now + 30000;
-          if (now >= nextTurn) {
-            const currentHdg = (drone.heading ?? 0) % 360;
-            const turnDeg = (Math.random() - 0.5) * 60; /* ±30° new heading */
-            this.droneTargetHeading.set(droneId, (currentHdg + turnDeg + 360) % 360);
-            this.droneNextTurnAt.set(droneId, now + 25000 + Math.random() * 15000); /* 25–40s */
+          /* Cruise 20%: orbit around platform — heading tangent to circle (bearing ± 90°), smooth interpolation */
+          const bearingToPlatform = this.calculateBearing(
+            drone.position as { lat: number; lng: number },
+            this.platform.position
+          );
+          /* Per-drone orbit direction (CW or CCW), assigned once */
+          let orbitDir = this.droneTargetHeading.get(droneId);
+          if (orbitDir == null) {
+            orbitDir = Math.random() < 0.5 ? 90 : -90;
+            this.droneTargetHeading.set(droneId, orbitDir);
           }
-          const targetHdg = this.droneTargetHeading.get(droneId);
-          if (targetHdg != null) {
-            let curHdg = (drone.heading ?? 0) % 360;
-            let diff = (targetHdg - curHdg + 360) % 360;
-            if (diff > 180) diff -= 360;
-            const maxTurn = 3 * dtSec; /* 3 deg/s arc */
-            const turn = Math.sign(diff) * Math.min(Math.abs(diff), maxTurn);
-            curHdg = (curHdg + turn + 360) % 360;
-            drone.heading = curHdg;
-            if (Math.abs(diff) < 1) this.droneTargetHeading.delete(droneId);
-          }
+          const tangentBearing = (bearingToPlatform + orbitDir + 360) % 360;
+          const currentHdg = (drone.heading ?? 0) % 360;
+          let diff = (tangentBearing - currentHdg + 360) % 360;
+          if (diff > 180) diff -= 360;
+          const maxTurn = 2.5 * dtSec; /* 2.5 deg/s for smooth orbital motion */
+          const turn = Math.sign(diff) * Math.min(Math.abs(diff), maxTurn);
+          drone.heading = (currentHdg + turn + 360) % 360;
         }
 
         /* All drones: move forward in heading direction (physics-based) */
@@ -514,6 +517,8 @@ export class SocketService {
     }
   }
 
+  private static readonly MAX_TARGETING_RANGE_M = 4000;
+
   private async handleEngagementFire(droneId: string, timestamp: string) {
     try {
       const drone = await Drone.findOne({ droneId });
@@ -521,6 +526,10 @@ export class SocketService {
         return;
       }
       const distanceM = this.calculateDistance(drone.position, this.platform.position);
+      if (distanceM > SocketService.MAX_TARGETING_RANGE_M) {
+        logger.info('engagement.rejected', { droneId, reason: 'Target beyond 4000m', distanceMeters: distanceM });
+        return;
+      }
       const hitProbability = calculateHitProbability(distanceM, drone.speed ?? 0);
       logger.info('engagement.fired', { droneId, distanceMeters: distanceM, hitProbability });
 
@@ -535,7 +544,6 @@ export class SocketService {
           this.stopFiring();
           return;
         }
-
         const platformDoc = await WeaponPlatform.findOne({ isActive: true });
         if (!platformDoc || platformDoc.ammoCount <= 0) {
           this.stopFiring();
@@ -554,6 +562,10 @@ export class SocketService {
         this.io.emit('platform:status', this.platform);
 
         const distanceM = this.calculateDistance(freshDrone.position, this.platform.position);
+        if (distanceM > SocketService.MAX_TARGETING_RANGE_M) {
+          this.stopFiring();
+          return;
+        }
         const hitProbability = calculateHitProbability(distanceM, freshDrone.speed ?? 0);
         const roll = Math.random();
         const isHit = roll <= hitProbability;
@@ -783,7 +795,7 @@ export class SocketService {
           droneType: 'FixedWing',
           status: 'Detected',
           position: this.generateRandomPosition(this.platform!.position, 2000),
-          speed: 100,
+          speed: 170,
           heading: Math.random() * 360,
           threatLevel: 0.6,
           isFriendly: false,
@@ -794,7 +806,7 @@ export class SocketService {
           droneType: 'FixedWing',
           status: 'Detected',
           position: this.generateRandomPosition(this.platform!.position, 2000),
-          speed: 95,
+          speed: 165,
           heading: Math.random() * 360,
           threatLevel: 0.55,
           isFriendly: false,
@@ -872,8 +884,14 @@ export class SocketService {
     const types: Array<{ type: string; speed: number; threat: number }> = [
       { type: 'Quadcopter', speed: 15, threat: 0.5 },
       { type: 'Quadcopter', speed: 18, threat: 0.45 },
-      { type: 'FixedWing', speed: 100, threat: 0.6 },
+      { type: 'Quadcopter', speed: 12, threat: 0.4 },
+      { type: 'Quadcopter', speed: 20, threat: 0.55 },
+      { type: 'FixedWing', speed: 175, threat: 0.6 },
+      { type: 'FixedWing', speed: 165, threat: 0.55 },
+      { type: 'FixedWing', speed: 185, threat: 0.65 },
       { type: 'VTOL', speed: 50, threat: 0.55 },
+      { type: 'VTOL', speed: 45, threat: 0.5 },
+      { type: 'VTOL', speed: 55, threat: 0.6 },
     ];
     const drones = types.map((t, i) => ({
       droneId: `TGT-${base}-${i + 1}`,

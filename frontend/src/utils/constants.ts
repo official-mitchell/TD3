@@ -36,6 +36,7 @@ export const TURRET_SWIVEL_MS_PER_360 = 12000;
 
 export const PLATFORM_CONSTANTS = {
   EFFECTIVE_RANGE: 2000, // meters
+  MAX_TARGETING_RANGE_M: 4000, // meters — no targeting beyond this
   MAX_ENGAGEMENT_ALTITUDE_M: 500, // meters — altitude above this blocks engagement
   UPDATE_INTERVAL: 16, // ms — 60 fps simulation tick rate
   ROTATION_DURATION: 1000, // ms
